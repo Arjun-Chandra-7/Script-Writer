@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralyst.local/schemas/script-intelligence-record.v1.schema.json",
+  "title": "ScriptIntelligenceRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_id", "compiler", "identity", "content",
+    "script_structure", "hook_intelligence", "retention_devices",
+    "linguistic_characteristics", "storytelling", "persuasion",
+    "information_density", "delivery", "script_edit_relationships",
+    "quality", "index_projections"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_id": {"type": "string", "minLength": 1},
+    "compiler": {"type": "object"},
+    "identity": {"type": "object"},
+    "content": {"type": "object"},
+    "script_structure": {"type": "object"},
+    "hook_intelligence": {"type": "object"},
+    "retention_devices": {"type": "array"},
+    "linguistic_characteristics": {"type": "object"},
+    "storytelling": {"type": "object"},
+    "persuasion": {"type": "object"},
+    "information_density": {"type": "object"},
+    "delivery": {"type": "object"},
+    "script_edit_relationships": {"type": "array"},
+    "quality": {"type": "object"},
+    "index_projections": {"type": "object"}
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": ["value", "evidence_type", "sources"],
+      "properties": {
+        "value": {},
+        "evidence_type": {
+          "enum": ["observed", "deterministic_derivation", "heuristic_inference", "model_inference", "unknown"]
+        },
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "method": {"type": "string"},
+        "sources": {"type": "array"},
+        "reason": {"type": "string"}
+      }
+    }
+  }
+}

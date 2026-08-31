@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralyst.local/schemas/outcome-record.v1.schema.json",
+  "title": "ShortFormOutcomeRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "report_id", "platform", "account_context_id",
+    "published_at", "measured_at", "measurement_window_hours", "metrics", "rights"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "report_id": {"type": "string", "minLength": 1},
+    "platform": {"type": "string", "minLength": 1},
+    "account_context_id": {"type": "string", "minLength": 1},
+    "cohort_key": {"type": ["string", "null"]},
+    "published_at": {"type": "string", "format": "date-time"},
+    "measured_at": {"type": "string", "format": "date-time"},
+    "measurement_window_hours": {"type": "number", "exclusiveMinimum": 0},
+    "metrics": {
+      "type": "object",
+      "description": "Platform-native measurements; absent metrics remain absent, never zero-filled.",
+      "properties": {
+        "views": {"type": "integer", "minimum": 0},
+        "reach": {"type": "integer", "minimum": 0},
+        "plays": {"type": "integer", "minimum": 0},
+        "total_watch_time_seconds": {"type": "number", "minimum": 0},
+        "average_watch_time_seconds": {"type": "number", "minimum": 0},
+        "likes": {"type": "integer", "minimum": 0},
+        "comments": {"type": "integer", "minimum": 0},
+        "shares": {"type": "integer", "minimum": 0},
+        "saves": {"type": "integer", "minimum": 0},
+        "total_interactions": {"type": "integer", "minimum": 0},
+        "follows": {"type": "integer", "minimum": 0},
+        "profile_visits": {"type": "integer", "minimum": 0},
+        "retention_curve": {"type": "array"}
+      },
+      "additionalProperties": true
+    },
+    "cohort_normalization": {"type": ["object", "null"]},
+    "rights": {
+      "type": "object",
+      "required": ["training_allowed", "basis"],
+      "properties": {
+        "training_allowed": {"type": "boolean"},
+        "basis": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

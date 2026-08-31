@@ -48,7 +48,7 @@ def assign_split(group_key: str, salt: str) -> str:
     return "test"
 
 
-def validate_report(raw: bytes, *, split_salt: str) -> ValidationResult:
+def parse_report(raw: bytes) -> dict[str, Any]:
     try:
         decoded = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
@@ -59,6 +59,12 @@ def validate_report(raw: bytes, *, split_salt: str) -> ValidationResult:
         raise ReportValidationError(f"invalid JSON: {exc.msg}") from exc
     if not isinstance(report, dict):
         raise ReportValidationError("report root must be an object")
+    return report
+
+
+def validate_report_document(
+    report: dict[str, Any], *, split_salt: str
+) -> ValidationResult:
 
     report_id = _required_text(report, "report_id")
     source = _required_mapping(report, "source")
@@ -124,3 +130,15 @@ def validate_report(raw: bytes, *, split_salt: str) -> ValidationResult:
         transcript_sha256=transcript_hash,
         canonical_json=canonical,
     )
+
+
+def parse_and_validate_report(
+    raw: bytes, *, split_salt: str
+) -> tuple[dict[str, Any], ValidationResult]:
+    report = parse_report(raw)
+    return report, validate_report_document(report, split_salt=split_salt)
+
+
+def validate_report(raw: bytes, *, split_salt: str) -> ValidationResult:
+    _report, result = parse_and_validate_report(raw, split_salt=split_salt)
+    return result

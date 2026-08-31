@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from .config import Settings
 from .database import Registry
 from .domain import RemoteFile, RemoteSource
+from .intelligence import ScriptIntelligenceCompiler
 from .storage import FileTooLargeError, RawStore
-from .validation import ReportValidationError, validate_report
+from .validation import ReportValidationError, parse_and_validate_report
 
 
 LOGGER = logging.getLogger(__name__)
@@ -23,11 +24,18 @@ class SyncSummary:
 
 
 class IngestionService:
-    def __init__(self, settings: Settings, registry: Registry, source: RemoteSource):
+    def __init__(
+        self,
+        settings: Settings,
+        registry: Registry,
+        source: RemoteSource,
+        compiler: ScriptIntelligenceCompiler | None = None,
+    ):
         self.settings = settings
         self.registry = registry
         self.source = source
         self.store = RawStore(settings.raw_dir, settings.max_file_bytes)
+        self.compiler = compiler or ScriptIntelligenceCompiler()
 
     def sync_once(self) -> SyncSummary:
         counters = {key: 0 for key in SyncSummary.__dataclass_fields__}
@@ -50,14 +58,36 @@ class IngestionService:
                         file_id, destination
                     )
                 )
-                result = validate_report(raw, split_salt=self.settings.split_salt)
-                self.registry.admit(
+                report, result = parse_and_validate_report(
+                    raw, split_salt=self.settings.split_salt
+                )
+                compiled = None
+                compile_error = None
+                try:
+                    compiled = self.compiler.compile(report, artifact_sha256=digest)
+                except Exception as exc:
+                    compile_error = f"{type(exc).__name__}: {exc}"
+                    LOGGER.exception(
+                        "script intelligence compilation failed for Drive item %s; "
+                        "raw report will remain admitted for deterministic retry",
+                        item.file_id,
+                    )
+                report_pk = self.registry.admit(
                     revision_id,
                     content_sha256=digest,
                     byte_size=size,
                     artifact_path=str(path),
                     result=result,
                 )
+                if compiled is not None and self.registry.report_artifact_sha256(report_pk) == digest:
+                    self.registry.save_intelligence(
+                        report_pk=report_pk,
+                        record=compiled.record,
+                        canonical_json=compiled.canonical_json,
+                        record_sha256=compiled.sha256,
+                    )
+                elif compile_error is not None and self.registry.report_artifact_sha256(report_pk) == digest:
+                    self.registry.mark_intelligence_failed(report_pk, compile_error)
             except (ReportValidationError, FileTooLargeError) as exc:
                 self.registry.mark_quarantined(revision_id, str(exc))
                 counters["quarantined"] += 1

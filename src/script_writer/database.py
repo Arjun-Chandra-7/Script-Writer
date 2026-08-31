@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import json
 import sqlite3
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from .domain import RemoteFile, ValidationResult
+from .migrations import migrate
 
 
 SCHEMA = """
@@ -160,6 +162,7 @@ class Registry:
         self.connection.execute(
             "INSERT OR IGNORE INTO schema_meta(key, value) VALUES ('version', '1')"
         )
+        migrate(self.connection)
 
     @contextlib.contextmanager
     def transaction(self, *, immediate: bool = False) -> Iterator[sqlite3.Connection]:
@@ -312,6 +315,14 @@ class Registry:
             raise KeyError(revision_id)
         return str(row["state"])
 
+    def report_artifact_sha256(self, report_pk: int) -> str:
+        row = self.connection.execute(
+            "SELECT artifact_sha256 FROM reports WHERE id = ?", (report_pk,)
+        ).fetchone()
+        if row is None:
+            raise KeyError(report_pk)
+        return str(row["artifact_sha256"])
+
     def counts(self) -> dict[str, int]:
         rows = self.connection.execute(
             "SELECT state, COUNT(*) AS count FROM source_revisions GROUP BY state"
@@ -460,3 +471,189 @@ class Registry:
             """
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def pending_intelligence_reports(
+        self, *, compiler_version: str, analyzer_version: str, limit: int
+    ) -> list[sqlite3.Row]:
+        return self.connection.execute(
+            """
+            SELECT r.id AS report_pk, r.artifact_sha256, a.path AS artifact_path
+            FROM reports r
+            JOIN artifacts a ON a.sha256 = r.artifact_sha256
+            LEFT JOIN intelligence_records ir ON ir.report_pk = r.id
+            WHERE ir.id IS NULL
+               OR ir.compiler_version != ?
+               OR ir.analyzer_version != ?
+               OR ir.source_artifact_sha256 != r.artifact_sha256
+            ORDER BY r.id
+            LIMIT ?
+            """,
+            (compiler_version, analyzer_version, limit),
+        ).fetchall()
+
+    def save_intelligence(
+        self,
+        *,
+        report_pk: int,
+        record: dict[str, object],
+        canonical_json: str,
+        record_sha256: str,
+    ) -> bool:
+        compiler = record["compiler"]
+        identity = record["identity"]
+        content = record["content"]
+        projections = record["index_projections"]
+        assert isinstance(compiler, dict)
+        assert isinstance(identity, dict)
+        assert isinstance(content, dict)
+        assert isinstance(projections, dict)
+        compiler_version = str(compiler["version"])
+        analyzer_version = str(compiler["semantic_analyzer_version"])
+        source_sha = str(identity["source_artifact_sha256"]["value"])
+        existing = self.connection.execute(
+            "SELECT record_sha256 FROM intelligence_records WHERE report_pk = ?",
+            (report_pk,),
+        ).fetchone()
+        if existing is not None and existing["record_sha256"] == record_sha256:
+            return False
+
+        def evidence_value(node: object) -> object | None:
+            return node.get("value") if isinstance(node, dict) else None
+
+        platform = evidence_value(identity.get("platform"))
+        content_format = evidence_value(content.get("content_format"))
+        topic = evidence_value(content.get("topic"))
+        duration = evidence_value(content.get("video_duration_seconds"))
+        search_text = str(projections["semantic_text"])
+        fingerprint = json.dumps(projections["structural_fingerprint"], separators=(",", ":"))
+        now = utc_now()
+        with self.transaction(immediate=True) as connection:
+            connection.execute(
+                """
+                INSERT INTO intelligence_records(
+                    report_pk, schema_version, compiler_version, analyzer_version,
+                    source_artifact_sha256, record_sha256, record_json, search_text,
+                    structural_fingerprint, platform, content_format, topic,
+                    duration_seconds, compile_status, compiled_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?)
+                ON CONFLICT(report_pk) DO UPDATE SET
+                    schema_version = excluded.schema_version,
+                    compiler_version = excluded.compiler_version,
+                    analyzer_version = excluded.analyzer_version,
+                    source_artifact_sha256 = excluded.source_artifact_sha256,
+                    record_sha256 = excluded.record_sha256,
+                    record_json = excluded.record_json,
+                    search_text = excluded.search_text,
+                    structural_fingerprint = excluded.structural_fingerprint,
+                    platform = excluded.platform,
+                    content_format = excluded.content_format,
+                    topic = excluded.topic,
+                    duration_seconds = excluded.duration_seconds,
+                    compile_status = 'ready', last_error = NULL,
+                    compiled_at = excluded.compiled_at
+                """,
+                (
+                    report_pk,
+                    record["schema_version"],
+                    compiler_version,
+                    analyzer_version,
+                    source_sha,
+                    record_sha256,
+                    canonical_json,
+                    search_text,
+                    fingerprint,
+                    platform,
+                    content_format,
+                    topic,
+                    duration,
+                    now,
+                ),
+            )
+            intelligence_id = int(
+                connection.execute(
+                    "SELECT id FROM intelligence_records WHERE report_pk = ?", (report_pk,)
+                ).fetchone()[0]
+            )
+            connection.execute(
+                "DELETE FROM intelligence_fts WHERE intelligence_id = ?", (intelligence_id,)
+            )
+            connection.execute(
+                "INSERT INTO intelligence_fts(intelligence_id, search_text) VALUES (?, ?)",
+                (intelligence_id, search_text),
+            )
+            connection.execute(
+                "DELETE FROM intelligence_mechanisms WHERE intelligence_id = ?",
+                (intelligence_id,),
+            )
+            mechanism_rows: list[tuple[object, ...]] = []
+            hook = record.get("hook_intelligence", {})
+            if isinstance(hook, dict):
+                for item in hook.get("mechanisms", []):
+                    if isinstance(item, dict):
+                        evidence = item.get("evidence", {})
+                        mechanism_rows.append(
+                            (
+                                intelligence_id,
+                                "hook",
+                                item.get("mechanism"),
+                                item.get("start_seconds"),
+                                item.get("end_seconds"),
+                                evidence.get("confidence") if isinstance(evidence, dict) else None,
+                                evidence.get("evidence_type", "unknown") if isinstance(evidence, dict) else "unknown",
+                            )
+                        )
+            for item in record.get("retention_devices", []):
+                if isinstance(item, dict):
+                    evidence = item.get("evidence", {})
+                    mechanism_rows.append(
+                        (
+                            intelligence_id,
+                            "retention",
+                            item.get("device"),
+                            item.get("start_seconds"),
+                            item.get("end_seconds"),
+                            evidence.get("confidence") if isinstance(evidence, dict) else None,
+                            evidence.get("evidence_type", "unknown") if isinstance(evidence, dict) else "unknown",
+                        )
+                    )
+            connection.executemany(
+                """
+                INSERT OR IGNORE INTO intelligence_mechanisms(
+                    intelligence_id, category, mechanism, start_seconds,
+                    end_seconds, confidence, evidence_type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                mechanism_rows,
+            )
+            connection.execute(
+                """
+                INSERT INTO intelligence_compile_attempts(
+                    report_pk, status, attempts, last_error, updated_at
+                ) VALUES (?, 'ready', 1, NULL, ?)
+                ON CONFLICT(report_pk) DO UPDATE SET
+                    status = 'ready', attempts = attempts + 1,
+                    last_error = NULL, updated_at = excluded.updated_at
+                """,
+                (report_pk, now),
+            )
+        return True
+
+    def mark_intelligence_failed(self, report_pk: int, error: str) -> None:
+        self.connection.execute(
+            """
+            INSERT INTO intelligence_compile_attempts(
+                report_pk, status, attempts, last_error, updated_at
+            ) VALUES (?, 'failed', 1, ?, ?)
+            ON CONFLICT(report_pk) DO UPDATE SET
+                status = 'failed', attempts = attempts + 1,
+                last_error = excluded.last_error, updated_at = excluded.updated_at
+            """,
+            (report_pk, error[:2000], utc_now()),
+        )
+
+    def intelligence_counts(self) -> dict[str, int]:
+        return {
+            "ready": int(self.connection.execute("SELECT COUNT(*) FROM intelligence_records WHERE compile_status = 'ready'").fetchone()[0]),
+            "failed": int(self.connection.execute("SELECT COUNT(*) FROM intelligence_compile_attempts WHERE status = 'failed'").fetchone()[0]),
+            "pending": int(self.connection.execute("SELECT COUNT(*) FROM reports r LEFT JOIN intelligence_records ir ON ir.report_pk = r.id WHERE ir.id IS NULL").fetchone()[0]),
+        }
