@@ -688,3 +688,24 @@ class Registry:
             ),
         )
         return self.connection.total_changes > before
+
+    def save_evaluation(self, evaluation: dict[str, object]) -> bool:
+        before = self.connection.total_changes
+        self.connection.execute(
+            """
+            INSERT OR IGNORE INTO evaluation_runs(
+                evaluation_id, evaluator_version, candidate_version,
+                baseline_version, fixture_set_version, result_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                evaluation["evaluation_id"],
+                evaluation["evaluator_version"],
+                evaluation["candidate_version"],
+                evaluation.get("baseline_version"),
+                evaluation["fixture_set_version"],
+                json.dumps(evaluation, sort_keys=True, separators=(",", ":")),
+                utc_now(),
+            ),
+        )
+        return self.connection.total_changes > before

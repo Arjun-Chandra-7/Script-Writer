@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralyst.local/schemas/evaluation-result.v1.schema.json",
+  "title": "ScriptWriterOfflineEvaluation",
+  "type": "object",
+  "required": [
+    "schema_version", "evaluation_id", "evaluator_version", "candidate_version",
+    "fixture_set_version", "deterministic_metrics", "judgment_dimensions", "summary"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "evaluation_id": {"type": "string"},
+    "evaluator_version": {"type": "string"},
+    "candidate_version": {"type": "string"},
+    "baseline_version": {"type": ["string", "null"]},
+    "fixture_set_version": {"type": "string"},
+    "deterministic_metrics": {"type": "array"},
+    "judgment_dimensions": {"type": "object"},
+    "summary": {"type": "object"}
+  }
+}

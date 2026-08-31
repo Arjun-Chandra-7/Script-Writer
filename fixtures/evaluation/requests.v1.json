@@ -1,0 +1,43 @@
+{
+  "fixture_set_version": "requests-v1",
+  "fixtures": [
+    {
+      "id": "fitness-beginner-30s",
+      "contract_version": "1.0.0",
+      "client_context_id": "fixture-client",
+      "niche": "fitness",
+      "topic": "starting a daily walking habit",
+      "objective": "help a beginner take one manageable first step",
+      "audience": "busy fitness beginners",
+      "desired_duration_seconds": 30,
+      "platform": "instagram_reels",
+      "tone": ["clear", "encouraging"],
+      "content_format": "talking_head",
+      "constraints": ["one actionable step"],
+      "factual_context": [],
+      "inspiration_record_ids": [],
+      "banned_patterns": ["you won't believe"],
+      "desired_cta": "Take a ten-minute walk today.",
+      "experimentation": {}
+    },
+    {
+      "id": "technology-explainer-45s",
+      "contract_version": "1.0.0",
+      "client_context_id": "fixture-client",
+      "niche": "technology",
+      "topic": "a complex technology concept",
+      "objective": "make one concept understandable without hype",
+      "audience": "curious non-experts",
+      "desired_duration_seconds": 45,
+      "platform": "instagram_reels",
+      "tone": ["specific", "calm"],
+      "content_format": "explainer",
+      "constraints": ["flag factual claims"],
+      "factual_context": [],
+      "inspiration_record_ids": [],
+      "banned_patterns": ["this changes everything"],
+      "desired_cta": null,
+      "experimentation": {}
+    }
+  ]
+}
