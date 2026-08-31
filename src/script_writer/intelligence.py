@@ -333,6 +333,7 @@ class ScriptIntelligenceCompiler:
     def compile(self, report: dict[str, Any], *, artifact_sha256: str) -> CompiledIntelligence:
         source = report["source"]
         transcript = report["transcript"]
+        context_metadata = _mapping(report.get("context"))
         raw_text = str(transcript["full_text"])
         clean_text = clean_transcript(raw_text)
         normalized_text = normalize_transcript(clean_text)
@@ -383,13 +384,30 @@ class ScriptIntelligenceCompiler:
             if word_confidences
             else None
         )
+        platform_evidence = (
+            observed(context_metadata["platform"], "$.context.platform")
+            if context_metadata.get("platform")
+            else unknown("platform is not present in the extractor report or enrichment context")
+        )
+        topic_evidence = observed(context_metadata["topic"], "$.context.topic") if context_metadata.get("topic") else semantic.topic
+        subtopic_evidence = observed(context_metadata["subtopic"], "$.context.subtopic") if context_metadata.get("subtopic") else semantic.subtopic
+        format_evidence = observed(context_metadata["content_format"], "$.context.content_format") if context_metadata.get("content_format") else semantic.content_format
+        audience_evidence = observed(context_metadata["audience_intent"], "$.context.audience_intent") if context_metadata.get("audience_intent") else semantic.audience_intent
         record_id = f"sir:{source['content_hash']}:{SCRIPT_INTELLIGENCE_SCHEMA_VERSION}"
         unknown_fields = [
-            "content.topic", "content.subtopic", "content.content_format", "content.audience_intent",
             "script_structure.progression", "script_structure.climax", "script_structure.cta",
             "storytelling.*", "persuasion.*", "information_density.claims/facts/anecdotes/actionable_steps",
             "delivery.energy_changes", "delivery.speech_rhythm",
         ]
+        for name, value in (
+            ("identity.platform", platform_evidence),
+            ("content.topic", topic_evidence),
+            ("content.subtopic", subtopic_evidence),
+            ("content.content_format", format_evidence),
+            ("content.audience_intent", audience_evidence),
+        ):
+            if value["evidence_type"] == "unknown":
+                unknown_fields.append(name)
         record: dict[str, Any] = {
             "schema_version": SCRIPT_INTELLIGENCE_SCHEMA_VERSION,
             "record_id": record_id,
@@ -406,7 +424,7 @@ class ScriptIntelligenceCompiler:
                 "source_artifact_sha256": derived(artifact_sha256, [SourceRef("$raw_bytes")], "sha256_of_raw_report_bytes"),
                 "extractor_version": observed(report["processing"]["extractor_version"], "$.processing.extractor_version"),
                 "source_filename": observed(source.get("filename"), "$.source.filename") if source.get("filename") else unknown("source filename absent"),
-                "platform": unknown("platform is not present in the extractor report"),
+                "platform": platform_evidence,
                 "source_created_at": unknown("source publication timestamp is not present"),
                 "source_modified_at": unknown("source modification timestamp is not present inside the report"),
             },
@@ -419,10 +437,10 @@ class ScriptIntelligenceCompiler:
                 ),
                 "normalized_transcript": derived(normalized_text, [SourceRef("$.transcript.full_text")], "NFKC_whitespace_lowercase_word_normalization_v1"),
                 "language": observed(transcript.get("language"), "$.transcript.language", confidence=_confidence(transcript.get("language_probability"))) if transcript.get("language") else unknown("language absent"),
-                "topic": semantic.topic,
-                "subtopic": semantic.subtopic,
-                "content_format": semantic.content_format,
-                "estimated_audience_intent": semantic.audience_intent,
+                "topic": topic_evidence,
+                "subtopic": subtopic_evidence,
+                "content_format": format_evidence,
+                "estimated_audience_intent": audience_evidence,
                 "video_duration_seconds": observed(duration, "$.source.duration_seconds"),
                 "spoken_word_count": derived(token_count, [SourceRef("$.transcript.full_text")], "compiler_tokenizer_v1"),
                 "words_per_second": derived(round(token_count / duration, 4), [SourceRef("$.transcript.full_text"), SourceRef("$.source.duration_seconds")], "word_count_divided_by_video_duration"),
@@ -502,8 +520,11 @@ class ScriptIntelligenceCompiler:
                 "warnings": [
                     "upstream semantic section labels are preserved as unverified hypotheses",
                     "hook and retention mechanism rules are heuristic, not ground truth",
-                    "no platform, publication, client, niche, audience, or outcome metadata was supplied",
-                ] + ([f"semantic analyzer failed gracefully: {semantic_error}"] if semantic_error else []),
+                    "no publication timestamp or outcome metadata was supplied",
+                ] + (
+                    ["platform/topic/audience metadata was not supplied"]
+                    if not context_metadata else []
+                ) + ([f"semantic analyzer failed gracefully: {semantic_error}"] if semantic_error else []),
             },
             "index_projections": {
                 "lexical_text": clean_text,
