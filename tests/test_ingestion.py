@@ -86,6 +86,31 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(registry.counts()["unique_reports"], 1)
         registry.close()
 
+    def test_reextracted_same_video_is_one_semantic_report(self) -> None:
+        first = make_report(report_id="first", content_hash="same-video")
+        changed = json.loads(first)
+        changed["report_id"] = "second"
+        changed["processing"]["extractor_version"] = "test-v2"
+        second = json.dumps(changed, sort_keys=True).encode()
+        source = MemorySource(
+            [
+                (remote("drive-1", first, "first.json"), first),
+                (remote("drive-2", second, "second.json"), second),
+            ]
+        )
+        registry = Registry(settings(self.tmp_path).database_path)
+        registry.initialize()
+
+        summary = IngestionService(settings(self.tmp_path), registry, source).sync_once()
+
+        self.assertEqual(summary.admitted, 2)
+        self.assertEqual(registry.counts()["unique_reports"], 1)
+        links = registry.connection.execute(
+            "SELECT DISTINCT report_pk FROM source_revisions"
+        ).fetchall()
+        self.assertEqual(len(links), 1)
+        registry.close()
+
     def test_invalid_report_is_quarantined_and_not_retried_forever(self) -> None:
         body = b"not-json"
         source = MemorySource([(remote("drive-bad", body), body)])

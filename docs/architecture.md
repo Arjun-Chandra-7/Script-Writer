@@ -74,6 +74,10 @@ For every Drive item it records:
 3. SHA-256 of the downloaded bytes (content identity).
 4. report ID and upstream source content hash (semantic/group identity).
 
+Only one trainable report row is admitted per upstream source content hash. A
+re-extraction with changed JSON bytes remains preserved as a source revision but
+links to the existing semantic example, so it cannot be silently trained twice.
+
 This handles four distinct cases safely:
 
 | Situation | Result |

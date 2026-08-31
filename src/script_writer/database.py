@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS reports (
 
 CREATE INDEX IF NOT EXISTS idx_reports_group ON reports(group_key);
 CREATE INDEX IF NOT EXISTS idx_reports_split_quality ON reports(split, quality_status);
+CREATE UNIQUE INDEX IF NOT EXISTS unique_report_per_source_content
+ON reports(source_content_hash);
 
 CREATE TABLE IF NOT EXISTS outcomes (
     report_id TEXT PRIMARY KEY,
@@ -273,7 +275,13 @@ class Registry:
                 ),
             )
             report = connection.execute(
-                "SELECT id FROM reports WHERE artifact_sha256 = ?", (content_sha256,)
+                """
+                SELECT id FROM reports
+                WHERE artifact_sha256 = ? OR source_content_hash = ?
+                ORDER BY CASE WHEN artifact_sha256 = ? THEN 0 ELSE 1 END
+                LIMIT 1
+                """,
+                (content_sha256, result.source_content_hash, content_sha256),
             ).fetchone()
             assert report is not None
             report_pk = int(report["id"])
