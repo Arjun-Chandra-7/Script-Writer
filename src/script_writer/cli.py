@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .config import Settings
 from .database import Registry
+from .datasets import DatasetBuilder, DatasetNotReadyError
 from .domain import RemoteFile
 from .drive import GoogleDriveSource
 from .ingestion import IngestionService, MemorySource
@@ -62,6 +63,10 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("init", help="initialize the durable local registry")
     commands.add_parser("sync", help="perform one Drive reconciliation scan")
     commands.add_parser("status", help="show ingestion and training queue state")
+    commands.add_parser(
+        "propose-run",
+        help="freeze eligible data and queue a run manifest; never executes training",
+    )
     watch = commands.add_parser("watch", help="continuously reconcile the Drive folder")
     watch.add_argument("--once", action="store_true", help="run once and exit")
     dry_run = commands.add_parser(
@@ -87,7 +92,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "status":
         registry = _registry(settings)
         try:
-            print(json.dumps(registry.counts(), sort_keys=True))
+            print(
+                json.dumps(
+                    {"counts": registry.counts(), "runs": registry.run_details()},
+                    sort_keys=True,
+                )
+            )
+        finally:
+            registry.close()
+        return 0
+    if args.command == "propose-run":
+        registry = _registry(settings)
+        try:
+            try:
+                proposal = DatasetBuilder(settings, registry).propose_run()
+            except DatasetNotReadyError as exc:
+                print(json.dumps({"queued": False, "reason": str(exc)}))
+                return 3
+            print(json.dumps(asdict(proposal), sort_keys=True))
         finally:
             registry.close()
         return 0

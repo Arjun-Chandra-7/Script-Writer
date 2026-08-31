@@ -29,6 +29,17 @@ class _BoundedHashWriter:
     def flush(self) -> None:
         self.target.flush()
 
+    def tell(self) -> int:
+        return self.size
+
+    def seek(self, offset: int, whence: int = os.SEEK_SET) -> int:
+        # MediaIoBaseDownload seeks to its current progress before writing each
+        # chunk. Reject rewinds because incremental hashing cannot safely accept
+        # overwritten bytes.
+        if whence != os.SEEK_SET or offset != self.size:
+            raise OSError("download attempted a non-sequential write")
+        return self.size
+
 
 class RawStore:
     def __init__(self, root: Path, max_file_bytes: int):

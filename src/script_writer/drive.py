@@ -57,7 +57,7 @@ class GoogleDriveSource(RemoteSource):
                     pageToken=page_token,
                     supportsAllDrives=True,
                     includeItemsFromAllDrives=True,
-                    orderBy="createdTime,id",
+                    orderBy="createdTime",
                 )
                 .execute()
             )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import sqlite3
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -303,4 +304,137 @@ class Registry:
         result["unique_reports"] = int(
             self.connection.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
         )
+        result["unreserved_train_reports"] = int(
+            self.connection.execute(
+                """
+                SELECT COUNT(*) FROM reports r
+                LEFT JOIN example_reservations er ON er.report_pk = r.id
+                WHERE r.split = 'train' AND er.report_pk IS NULL
+                """
+            ).fetchone()[0]
+        )
+        result["active_training_runs"] = int(
+            self.connection.execute(
+                """
+                SELECT COUNT(*) FROM training_runs
+                WHERE state IN ('queued', 'preparing', 'running', 'evaluating')
+                """
+            ).fetchone()[0]
+        )
         return result
+
+    def select_new_training_reports(self, limit: int) -> list[sqlite3.Row]:
+        return self.connection.execute(
+            """
+            SELECT r.* FROM reports r
+            LEFT JOIN example_reservations er ON er.report_pk = r.id
+            WHERE r.split = 'train' AND er.report_pk IS NULL
+            ORDER BY r.id
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+    def active_run_id(self) -> str | None:
+        row = self.connection.execute(
+            """
+            SELECT run_id FROM training_runs
+            WHERE state IN ('queued', 'preparing', 'running', 'evaluating')
+            ORDER BY id DESC LIMIT 1
+            """
+        ).fetchone()
+        return None if row is None else str(row["run_id"])
+
+    def select_replay_reports(self, limit: int, seed: str) -> list[sqlite3.Row]:
+        if limit <= 0:
+            return []
+        rows = self.connection.execute(
+            """
+            SELECT DISTINCT r.* FROM reports r
+            JOIN example_reservations er ON er.report_pk = r.id
+            WHERE r.split = 'train' AND er.status = 'consumed'
+            """
+        ).fetchall()
+        return sorted(
+            rows,
+            key=lambda row: hashlib.sha256(
+                f"{seed}:{row['artifact_sha256']}".encode()
+            ).digest(),
+        )[:limit]
+
+    def create_queued_run(
+        self,
+        *,
+        version: str,
+        manifest_sha256: str,
+        manifest_path: str,
+        config_sha256: str,
+        new_report_ids: list[int],
+        replay_report_ids: list[int],
+        evaluation_report_ids: list[int],
+    ) -> str:
+        """Atomically register an immutable snapshot and reserve its new examples."""
+        now = utc_now()
+        run_id = f"run-{version}"
+        with self.transaction(immediate=True) as connection:
+            active = connection.execute(
+                """
+                SELECT run_id FROM training_runs
+                WHERE state IN ('queued', 'preparing', 'running', 'evaluating')
+                """
+            ).fetchone()
+            if active is not None:
+                raise RuntimeError(f"active training run already exists: {active['run_id']}")
+            connection.execute(
+                """
+                INSERT INTO dataset_versions(
+                    version, manifest_sha256, manifest_path, status, created_at
+                ) VALUES (?, ?, ?, 'ready', ?)
+                """,
+                (version, manifest_sha256, manifest_path, now),
+            )
+            dataset_id = int(connection.execute("SELECT last_insert_rowid()").fetchone()[0])
+            connection.execute(
+                """
+                INSERT INTO training_runs(
+                    run_id, dataset_id, state, training_enabled, config_sha256,
+                    created_at, updated_at
+                ) VALUES (?, ?, 'queued', 0, ?, ?, ?)
+                """,
+                (run_id, dataset_id, config_sha256, now, now),
+            )
+            run_pk = int(connection.execute("SELECT last_insert_rowid()").fetchone()[0])
+            members = [
+                *((dataset_id, report_id, "new") for report_id in new_report_ids),
+                *((dataset_id, report_id, "replay") for report_id in replay_report_ids),
+                *((dataset_id, report_id, "evaluation") for report_id in evaluation_report_ids),
+            ]
+            connection.executemany(
+                "INSERT INTO dataset_members(dataset_id, report_pk, role) VALUES (?, ?, ?)",
+                members,
+            )
+            connection.executemany(
+                """
+                INSERT INTO example_reservations(report_pk, run_pk, status, created_at)
+                VALUES (?, ?, 'reserved', ?)
+                """,
+                [(report_id, run_pk, now) for report_id in new_report_ids],
+            )
+        return run_id
+
+    def run_details(self) -> list[dict[str, object]]:
+        rows = self.connection.execute(
+            """
+            SELECT tr.run_id, tr.state, tr.training_enabled, tr.created_at,
+                   dv.version, dv.manifest_sha256, dv.manifest_path,
+                   SUM(CASE WHEN dm.role = 'new' THEN 1 ELSE 0 END) AS new_count,
+                   SUM(CASE WHEN dm.role = 'replay' THEN 1 ELSE 0 END) AS replay_count,
+                   SUM(CASE WHEN dm.role = 'evaluation' THEN 1 ELSE 0 END) AS eval_count
+            FROM training_runs tr
+            JOIN dataset_versions dv ON dv.id = tr.dataset_id
+            JOIN dataset_members dm ON dm.dataset_id = dv.id
+            GROUP BY tr.id
+            ORDER BY tr.id DESC
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]

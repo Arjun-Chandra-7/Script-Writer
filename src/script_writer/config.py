@@ -19,6 +19,18 @@ def _positive_int(name: str, default: int) -> int:
     return value
 
 
+def _boolean(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be true or false")
+
+
 @dataclass(frozen=True)
 class Settings:
     folder_id: str
@@ -28,6 +40,10 @@ class Settings:
     max_file_bytes: int = 16 * 1024 * 1024
     lease_seconds: int = 15 * 60
     split_salt: str = "viralyst-script-writer-v1"
+    min_new_examples: int = 500
+    max_new_examples: int = 500
+    replay_ratio_percent: int = 25
+    rights_attested: bool = False
 
     @property
     def database_path(self) -> Path:
@@ -60,4 +76,10 @@ class Settings:
             split_salt=os.getenv(
                 "SCRIPT_WRITER_SPLIT_SALT", "viralyst-script-writer-v1"
             ),
+            min_new_examples=_positive_int("SCRIPT_WRITER_MIN_NEW_EXAMPLES", 500),
+            max_new_examples=_positive_int("SCRIPT_WRITER_MAX_NEW_EXAMPLES", 500),
+            replay_ratio_percent=_positive_int(
+                "SCRIPT_WRITER_REPLAY_RATIO_PERCENT", 25
+            ),
+            rights_attested=_boolean("SCRIPT_WRITER_RIGHTS_ATTESTED", False),
         )
