@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralyst.local/schemas/generation-result.v1.schema.json",
+  "title": "ScriptGenerationResult",
+  "type": "object",
+  "required": [
+    "contract_version", "spoken_script", "hook", "sections",
+    "on_screen_text_suggestions", "delivery_notes", "visual_cues", "cta",
+    "claims_requiring_verification", "creative_mechanisms",
+    "retrieved_evidence", "rationale"
+  ],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "generator_version": {"type": "string"},
+    "spoken_script": {"type": "string"},
+    "hook": {"type": "string"},
+    "sections": {"type": "array"},
+    "on_screen_text_suggestions": {"type": "array"},
+    "delivery_notes": {"type": "array"},
+    "visual_cues": {"type": "array"},
+    "cta": {"type": ["string", "null"]},
+    "claims_requiring_verification": {"type": "array"},
+    "creative_mechanisms": {"type": "array"},
+    "retrieved_evidence": {"type": "array"},
+    "rationale": {"type": "array"}
+  }
+}

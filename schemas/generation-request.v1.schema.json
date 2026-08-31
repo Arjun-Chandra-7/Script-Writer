@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralyst.local/schemas/generation-request.v1.schema.json",
+  "title": "ScriptGenerationRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "client_context_id", "niche", "topic", "objective", "audience", "desired_duration_seconds", "platform"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "client_context_id": {"type": "string", "minLength": 1},
+    "niche": {"type": "string"},
+    "topic": {"type": "string", "minLength": 1},
+    "objective": {"type": "string", "minLength": 1},
+    "audience": {"type": "string", "minLength": 1},
+    "desired_duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "platform": {"type": "string", "minLength": 1},
+    "tone": {"type": "array", "items": {"type": "string"}},
+    "content_format": {"type": ["string", "null"]},
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "factual_context": {"type": "array", "items": {"type": "string"}},
+    "inspiration_record_ids": {"type": "array", "items": {"type": "string"}},
+    "banned_patterns": {"type": "array", "items": {"type": "string"}},
+    "desired_cta": {"type": ["string", "null"]},
+    "experimentation": {"type": "object"}
+  }
+}

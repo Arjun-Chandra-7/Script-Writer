@@ -157,6 +157,15 @@ class CorpusIndex:
         )
         return {"indexed": indexed, "remaining": remaining}
 
+    def get_record(self, record_id: str) -> dict[str, Any]:
+        row = self.registry.connection.execute(
+            "SELECT record_json FROM intelligence_records WHERE json_extract(record_json, '$.record_id') = ?",
+            (record_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(record_id)
+        return json.loads(row["record_json"])
+
     def rebuild_all(self, *, force: bool = False, batch_size: int = 500) -> dict[str, int]:
         total = 0
         first = True
@@ -307,13 +316,7 @@ class CorpusIndex:
         return [hit for hit, _vector in selected]
 
     def structurally_similar(self, record_id: str, *, top_k: int = 10) -> list[CorpusHit]:
-        row = self.registry.connection.execute(
-            "SELECT record_json FROM intelligence_records WHERE json_extract(record_json, '$.record_id') = ?",
-            (record_id,),
-        ).fetchone()
-        if row is None:
-            raise KeyError(record_id)
-        record = json.loads(row["record_json"])
+        record = self.get_record(record_id)
         fingerprint = set(record["index_projections"]["structural_fingerprint"])
         source_hash = str(record["identity"]["source_content_hash"]["value"])
         current_id = int(
