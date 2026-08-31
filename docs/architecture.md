@@ -1,222 +1,226 @@
-# Script Writer architecture
+# Script Intelligence architecture
 
-## 1. Scope and non-goals
+## Product scope
 
-This component is a narrowly scoped Script Writer sub-agent. It receives
-evidence reports from an upstream video extractor and eventually produces
-short-form scripts plus explicit creative rationale. It does not publish,
-change channel policy, self-approve fine-tuning, or infer success from a video's
-existence.
+VIRALYST currently targets short-form content for one client/account context at
+a time, with Instagram/Reels as the primary platform. Platform is a metadata
+dimension rather than a hardcoded dependency. Three creative agents may use the
+same intelligence, retrieval, and generation contracts and independently
+produce different creative candidates.
 
-This phase builds ingestion, provenance, dataset, and job-control foundations.
-It does **not** download a base model, tokenize a corpus, allocate a GPU, run a
-training step, or promote a model.
+The historical Agentic YouTube Evolution System document is retained only as
+project history. Portfolio/channel evolution, different specialist agents,
+YouTube-only metrics, and automatic training are not current assumptions.
 
-## 2. Evidence contract
-
-### Extractor report (required)
-
-The supplied report format contains useful observed evidence:
-
-- stable report/source identity and extraction version;
-- transcript text, word timing, pauses, delivery, and confidence;
-- measured editing, audio, color, overlay, and cross-modal events;
-- provenance, verification state, exclusions, and known deferred analysis.
-
-The adapter admits a report only when JSON is parseable, extraction and
-transcript states are complete, identity fields exist, duration and transcript
-are plausible, and the report is not an exact content duplicate. Values marked
-unverified, inferred, or excluded remain contextual features and cannot become
-ground-truth labels.
-
-### Outcome sidecar (required for performance weighting)
-
-An extractor report is not a virality label. A companion outcome record should
-eventually be joined by `report_id` and include at least:
-
-```json
-{
-  "schema_version": "1.0",
-  "report_id": "86c1671e8a3a7b46",
-  "platform": "youtube_shorts",
-  "channel_id_hash": "...",
-  "niche": "technology",
-  "published_at": "2026-08-01T12:00:00Z",
-  "measured_at": "2026-08-08T12:00:00Z",
-  "impressions": 100000,
-  "views": 64000,
-  "viewed_vs_swiped": 0.71,
-  "average_percentage_viewed": 0.88,
-  "retention_curve": [[0, 1.0], [3, 0.82], [30, 0.61]],
-  "shares": 2100,
-  "saves": 900,
-  "likes": 7800,
-  "comments": 430,
-  "rights": {"training_allowed": true, "basis": "owned"}
-}
-```
-
-Raw counts must not be treated as directly comparable across channel size,
-niche, platform, geography, publication time, and video age. The future label
-builder must normalize within an appropriate cohort and retain the original
-measurements. Rights are a hard gate, not a score.
-
-## 3. Ingestion and idempotency
-
-The service performs a paginated, read-only listing of JSON files whose parent
-is the configured folder. A full reconciliation scan is the correctness path;
-notifications may later reduce latency but are never the source of truth.
-
-For every Drive item it records:
-
-1. Drive file ID (remote identity).
-2. revision key (`md5Checksum`, or modified time and size when unavailable).
-3. SHA-256 of the downloaded bytes (content identity).
-4. report ID and upstream source content hash (semantic/group identity).
-
-Only one trainable report row is admitted per upstream source content hash. A
-re-extraction with changed JSON bytes remains preserved as a source revision but
-links to the existing semantic example, so it cannot be silently trained twice.
-
-This handles four distinct cases safely:
-
-| Situation | Result |
-|---|---|
-| Same file appears in every scan | No download when revision is unchanged |
-| File renamed | Same Drive ID/revision; no new example |
-| Same bytes uploaded under a new ID | SHA-256 collision links to existing artifact |
-| File replaced in place | New immutable revision is downloaded and validated |
-
-Download goes to a unique `.part` path, is flushed and hashed, then atomically
-renamed. Database transitions happen in short transactions. Startup reclaims
-expired leases and reconciles temporary files, making power loss and process
-restart safe.
-
-## 4. Durable state machines
-
-SQLite in WAL mode is sufficient for one host and 10,000 reports. The schema is
-designed so PostgreSQL can replace it if multiple writer hosts are introduced.
+## Current data flow
 
 ```text
-source revision: discovered -> downloading -> downloaded
-                                      |             |
-                                      +-> retry     v
-                                                validated -> admitted
-                                                     |
-                                                     +-> quarantined
-
-training run: queued -> preparing -> running -> evaluating -> promotable
-                          |           |              |
-                          +-----------+-> failed/resumable
+Extractor
+  raw multimodal evidence report
+        |
+        v
+Ingestion
+  Drive revision -> atomic raw artifact -> validation -> dedupe/quarantine
+        |
+        v
+Canonical Evidence
+  validated identity/transcript + immutable raw provenance
+        |
+        v
+Script Intelligence compiler v1
+  deterministic features + versioned semantic adapter + uncertainty envelopes
+        |
+        v
+Corpus Index
+  metadata | FTS5 | mechanisms | fingerprints | embedding projections
+        |
+        v
+Retrieval
+  filters + lexical + semantic interface + structural similarity + diversity
+        |
+        v
+Generation Context
+  bounded evidence summaries, explicit anti-copy and grounding instructions
+        |
+        v
+Script Writer interface
+  structured ScriptGenerationResult (deterministic demonstrator today)
+        |
+        v
+Offline evaluation today / human judgment and possible training later
 ```
 
-Unique constraints enforce content identity, report revision identity, dataset
-membership, and "new example consumed by run" identity. States are updated only
-after the corresponding durable artifact exists.
+## Ingestion invariants retained
 
-## 5. Dataset snapshots
+The existing ingestion design remains the durable boundary:
 
-Each admitted report produces a canonical example projection rather than
-feeding the 800 KB raw JSON directly to the model. The raw file remains
-immutable for audit/reprocessing. The projection contains:
+- Drive file ID + revision key track remote identity;
+- report-byte SHA-256 tracks exact content;
+- `source.content_hash` tracks the semantic source video;
+- temporary downloads are size-bounded, flushed, hashed, and atomically moved;
+- SQLite WAL transactions, leases, and retry/quarantine states survive restart;
+- re-uploads and re-extractions preserve raw revisions but map to one semantic report.
 
-- clean transcript and timing-derived delivery features;
-- only measured/verified creative features with provenance;
-- source/extractor schema versions and confidence policy;
-- outcome and cohort-normalized scores when available;
-- rights and exclusion decisions;
-- a target script representation only when the training objective supports it.
+Compilation occurs from the already-parsed report during new ingestion. Legacy
+admitted reports use `script-writer compile`; compiled records are cached by
+source artifact, compiler version, analyzer version, and record SHA-256. A
+compiler failure never destroys or rejects an otherwise valid raw report.
 
-Split assignment uses a keyed hash of the strongest stable group identity
-(upstream video content hash, falling back to report ID). Assignment is written
-once. All revisions or duplicates of a source stay in the same split.
+## ScriptIntelligenceRecord v1
 
-Snapshots are immutable JSONL manifests with a SHA-256 digest. A training run
-references one exact snapshot, base model revision, adapter revision,
-configuration digest, code commit, and random seed. Reconstructing a run never
-depends on the current contents of Drive.
+The authoritative machine contract is
+`schemas/script-intelligence-record.v1.schema.json`. Every interpretive value
+uses one of five evidence classes:
 
-## 6. Batch arrival and continual updates
+| Evidence type | Meaning |
+|---|---|
+| `observed` | Directly supplied/measured by the extractor or enrichment context |
+| `deterministic_derivation` | Reproducible calculation from cited source fields |
+| `heuristic_inference` | Versioned rule/hypothesis, never ground truth |
+| `model_inference` | Output of a named/versioned future model |
+| `unknown` | Evidence is absent or reliability is insufficient |
 
-The orchestrator permits ingestion while training but permits only one active
-training run. When 500 files arrive:
+Source references use JSON-style paths plus timestamps where available.
+Confidence is included only when meaningful; unknown values are JSON `null` and
+must include a reason.
 
-1. all visible files are reconciled and admitted or quarantined;
-2. eligible, never-consumed training examples are reserved transactionally;
-3. the run snapshot combines those new examples with a stratified replay sample
-   of older examples;
-4. files arriving during the run remain unconsumed for the next run;
-5. interruption resumes the same run from its last complete checkpoint;
-6. only a successful, evaluation-gated run marks its new-example reservation
-   consumed;
-7. a failed run can be retried or explicitly abandoned, releasing its
-   reservation without losing the examples.
+### Deterministic compiler output
 
-Failed/resumable and evaluated-but-not-promoted runs count as unresolved. They
-block creation of a later run so adapter lineage cannot jump past a failure or
-an unreviewed candidate while newer files continue to ingest safely.
+- cleaned and normalized transcript;
+- compiler word count, duration-normalized rate, sentence distributions;
+- vocabulary proxies, person usage, question/numerical density, transitions,
+  repetition, short-sentence share, and explicitly labeled lexical proxies;
+- aligned cadence, extractor pace, pauses, candidate emphasis, silence, and
+  large rolling-pace transitions;
+- 10-second lexical information-density windows;
+- verified edit proximity to sentence boundaries;
+- preserved upstream caption/cross-modal relationships when evidence exists.
 
-This is at-least-once discovery with effectively-once dataset admission. It
-does not claim impossible exactly-once execution across GPU/process failure;
-instead it makes every repeated operation idempotent.
+### Semantic output
 
-## 7. Training strategy (future, approval required)
+`SemanticAnalyzer` is an explicit local protocol. The included conservative
+rule implementation detects only supported surface mechanisms (for example,
+question punctuation, contrast markers, explicit examples, direct address,
+specificity markers, and stakes language). All are labeled heuristic. If an
+analyzer raises, the compiler uses `NullSemanticAnalyzer`, preserves
+deterministic fields, records the failure, and emits unknown semantic fields.
 
-Do not train a language model from scratch on 10,000 short videos. Start with a
-strong instruction-tuned base whose license permits the intended use, freeze
-the backbone, and compare prompt/RAG baselines against LoRA/QLoRA supervised
-fine-tuning. Select the exact base only after hardware, languages, commercial
-license, context length, and latency requirements are known.
+Topic, subtopic, content format, audience intent, full progression, storytelling
+roles, persuasion roles, factual claims, and CTA are not reliably available in
+the real sample. Optional `report.context` enrichment can provide platform,
+topic, subtopic, content format, and audience intent as observed metadata.
 
-Recommended staged objectives:
+## Index projections
 
-1. **Structure baseline:** retrieval plus a carefully specified generation
-   contract, before weight changes.
-2. **Supervised adaptation:** high-quality, rights-cleared script examples;
-   loss should apply to the assistant target, not source metadata.
-3. **Preference optimization:** human/editor preference pairs and reliable
-   performance-matched pairs; never raw view-count ranking.
-4. **Continual updates:** new high-quality data plus replay, conservative
-   learning rate, fixed regression suite, and adapter lineage.
+Raw ~800 KB reports are never embedded. The record defines three bounded views:
 
-The generated contract should separate spoken script, on-screen text, beat
-timing, visual suggestions, claims needing verification, and rationale. That
-keeps downstream agents from parsing an unstructured blob.
+1. `lexical_text`: cleaned spoken transcript for FTS5 retrieval.
+2. `semantic_text`: hook + detected mechanisms/devices + transcript, for a
+   pluggable semantic embedding provider.
+3. `structural_fingerprint`: symbolic section, hook, retention, and script/edit
+   tokens for exact Jaccard structural similarity.
 
-## 8. Evaluation and promotion
+The current `HashingEmbeddingProvider` is deterministic signed unigram/bigram
+feature hashing. It supports tests, reproducibility, and a useful local lexical-
+semantic baseline; it is not presented as a learned semantic model. A future
+provider must be explicitly versioned and can rebuild alongside old vectors.
 
-"Banger" is a product outcome, not a single offline metric. Promotion requires:
+SQLite FTS5 handles lexical candidate generation. Metadata and mechanism tables
+support platform, topic, format, duration, hook, and retention filters. Semantic
+cosine and structural Jaccard rerank candidates, followed by bounded
+diversification. Exact structural search scans only compact fingerprints, not
+record JSON, which is appropriate for 5,000–50,000 records.
 
-- schema/constraint pass rate and factuality/safety checks;
-- fixed, never-trained-on challenge sets by niche and format;
-- novelty and memorization checks against the corpus;
-- blinded pairwise ratings from qualified human editors;
-- regression against the currently promoted model;
-- later, randomized online experiments using comparable channel cohorts.
+## Content evidence versus outcome evidence
 
-Perplexity alone is not an acceptance metric. A candidate can be lower-loss and
-still write worse hooks, hallucinate claims, or imitate source scripts too
-closely. Promotion writes a new registry pointer atomically; rollback only
-changes that pointer. Checkpoints and evaluation evidence remain immutable.
+`ScriptIntelligenceRecord` answers: **what creative/script mechanisms exist?**
+It is useful without analytics.
 
-## 9. Security and operations
+`ShortFormOutcomeRecord` answers: **how did this post perform within a defined
+account/platform/time cohort?** It supports Instagram/Reels metrics including
+views, reach, plays, total/average watch time, likes, comments, shares, saves,
+interactions, follows, profile visits, and optional retention/rate fields.
 
-- Use a service account with Viewer access to only the input folder.
-- Mount credentials as a secret; never commit them or copy them into logs.
-- Validate maximum byte size before and during download.
-- Treat report text as untrusted data, not instructions to the orchestrator.
-- Log redacted IDs, state transitions, hashes, counts, and reasons.
-- Export backlog age, scan lag, retry count, quarantine count, active run,
-  checkpoint age, and evaluation/promotion status.
-- Back up the state database and immutable manifests; test restoration.
-- Keep raw reports because future schema adapters must be reproducible.
+Raw counts are stored, never converted into an invented virality score. Any
+normalization must name its cohort, method, sample size, measurement window, and
+provenance. Outcome records later supply ranking, preference, and weighting
+signals; they are not required for intelligence compilation or retrieval.
 
-## 10. Explicit owner gates
+## Retrieval-first generation contract
 
-The main context classifies model fine-tuning as approval-required. Therefore:
+`GenerationRequest` contains client context, niche, topic, objective, audience,
+duration, platform, tone, format, constraints, factual context, inspirations,
+banned patterns, CTA, and experimentation controls.
 
-- ingestion and validation may run automatically;
-- manifest creation may run automatically under configured thresholds;
-- launching a training process requires an explicit owner-controlled enable
-  switch and an approved run manifest;
-- promotion requires an evaluation report and a separate approval decision.
+The pipeline constructs a corpus query, retrieves and diversifies evidence,
+builds a bounded `GenerationContext`, and invokes a `ScriptGenerator` protocol.
+`ScriptGenerationResult` separates spoken script, hook, timed sections,
+on-screen text, delivery notes, useful visual cues, CTA, claims needing review,
+mechanisms, evidence references, and rationale.
+
+Retrieved text is analysis-only. Instructions prohibit copying; banned patterns
+are checked after generation; offline evaluation measures contiguous and
+5-gram overlap. The included deterministic outline generator demonstrates the
+contract only. It is not the final creative agent.
+
+## Objective-specific datasets and leakage
+
+There is no universal dataset split:
+
+| Objective | Eligibility | Split policy |
+|---|---|---|
+| Corpus understanding | Compiled content evidence | 100% searchable corpus; not training |
+| Script generation SFT | Explicit prompt + approved target | 90/5/5 baseline |
+| Preference/ranking | Comparable chosen/rejected pair | 80/10/10 baseline |
+| Retrieval evaluation | Labeled query/relevance judgments | development/test |
+| Challenge/regression | Owner-reviewed frozen fixtures | 100% challenge, never training |
+| Performance learning | Cohort-aware outcome evidence | 80/10/10 baseline, later temporal review |
+
+Split percentages are policies, not universal truths. `LeakageGuard` clusters by
+source hash, exact transcript, derived-source linkage, and banded 64-bit
+transcript SimHash before deterministic objective-specific assignment. Manifest
+validation rejects a cluster crossing splits. The legacy inert training-manifest
+code remains for audit compatibility but is not invoked by the watcher and does
+not constitute a valid SFT dataset.
+
+## Offline evaluation
+
+Deterministic checks implemented today:
+
+- generation schema and required sections;
+- approximate duration budget (explicit 2.5 words/second planning proxy);
+- section timestamp monotonicity/bounds;
+- banned-pattern and desired-CTA contract compliance;
+- retrieval reference integrity and diversity reporting;
+- longest contiguous phrase and five-gram overlap against retrieved sources;
+- claims-review queue presence.
+
+Hook quality, coherence, progression, originality, relevance, audience/client
+fit, factual grounding, unsupported claims, CTA quality, and retrieval quality
+remain `not_evaluated` until a human or named/versioned evaluator supplies
+judgment. No aggregate quality or virality score is fabricated.
+
+## Scale and recovery
+
+For 5,000–50,000 reports:
+
+- each giant raw JSON is parsed once during new ingestion;
+- compact intelligence JSON and projections are cached;
+- compilation and embedding rebuilds are incremental and batch-bounded;
+- FTS and metadata filter candidates before record loading;
+- full structural comparison reads compact fingerprints only;
+- schema v1 databases migrate deterministically to v2;
+- raw corruption is quarantined and compiler failures are separately observable;
+- compiler, analyzer, embedding, schema, and fixture versions make rebuilds reproducible.
+
+SQLite remains appropriate for one local writer/service at this scale. Multiple
+concurrent writer hosts would require a transactional server database.
+
+## Planned, not implemented
+
+- learned semantic analyzer and production embeddings;
+- Instagram Insights connector and cohort-normalization jobs;
+- editor/human rating interface;
+- production creative generator used by the three agents;
+- frozen retrieval judgments and broader challenge fixtures;
+- any training, fine-tuning, checkpoint, or promotion workflow.

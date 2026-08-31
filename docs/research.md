@@ -1,76 +1,113 @@
-# Research record and design decisions
+# Research and extractor audit
 
-Research was conducted before implementation, with preference for official
-documentation and primary papers. Accessed 2026-08-31.
+Accessed and updated 2026-08-31. Primary/official sources are preferred.
 
-## Findings that changed the design
+## Real extractor report findings
 
-### Drive discovery is reconciled, not trusted as an event stream
+The supplied 811,349-byte report was inspected directly rather than treated as
+a generic JSON blob. It contains:
 
-Google Drive supports listing files by parent membership and selecting explicit
-response fields. Binary files expose `md5Checksum`, but it is not universal.
-Drive also supports change notifications, yet notifications are a wake-up
-mechanism and require renewal. The architecture consequently uses paginated
-full reconciliation as its correctness path and may add notifications only as
-an optimization.
+- report ID, upstream content hash, duration (59.118 s), resolution, FPS, and
+  extractor version;
+- 166 aligned transcript words, 11 timed sentences, language probability,
+  rolling delivery windows, 16 pauses, and six emphasis candidates;
+- five verified edit boundaries and editing summary;
+- 65 OCR/caption events plus transcript alignment and explicit OCR errors;
+- audio measurements/events, silence ranges, color/visual evidence, five
+  cross-modal edit events, and a 217-item master timeline;
+- confidence/provenance policy and deferred speaker diarization;
+- ten upstream semantic sections whose status is explicitly
+  `structural_hypothesis_unverified`.
 
-- [Search for files and folders](https://developers.google.com/workspace/drive/api/guides/search-files)
-- [Drive file resource](https://developers.google.com/workspace/drive/api/reference/rest/v3/files)
-- [Notifications for resource changes](https://developers.google.com/workspace/drive/api/guides/push)
+Important absences: platform, publication timestamp, client/account, niche,
+topic, audience, reliable content format, outcome analytics, CTA truth, factual
+claim labels, speaker diarization, and verified story/persuasion roles. The
+compiler emits unknown for these unless an enrichment context or future
+versioned semantic analyzer supplies them.
 
-### Checkpoint resume is necessary but not sufficient
+The upstream semantic labels are useful hypotheses but cannot be upgraded to
+observations. Caption OCR confidence also does not imply transcript alignment;
+the sample contains high-confidence OCR strings with zero lexical alignment.
 
-Hugging Face Trainer can resume from a checkpoint and restores relevant random
-states. Its current guidance also describes incomplete-checkpoint sentinels and
-graceful termination. The surrounding system must still pin the dataset
-snapshot and prevent a failed run from being recreated with different data.
+## Migration from historical assumptions
 
-- [Trainer](https://huggingface.co/docs/transformers/main_classes/trainer)
-- [Trainer recipes: resume training](https://huggingface.co/docs/transformers/main/trainer_recipes)
+| Historical assumption | Current decision |
+|---|---|
+| Agentic YouTube portfolio/channels | One client/account context; Instagram/Reels first |
+| Agents are niche specialists | Three peers share the same intelligence and may vary outputs |
+| YouTube Shorts outcome fields | Platform-aware outcome envelope with Instagram/Reels metrics |
+| Raw reports become training examples | Raw -> canonical intelligence -> retrieval; training absent |
+| Automatic 500-file training proposal | Watcher compiles/indexes only; auto-proposal disabled |
+| Universal 90/5/5 | Objective-specific policies with grouped leakage protection |
+| Fine-tuning architecture is the near-term center | Retrieval-first generation and evaluation are current |
 
-### Exact and near deduplication protect both quality and evaluation
+The historical `.docx` remains unchanged for provenance.
 
-Lee et al. found that duplicated training data increases memorized generation
-and contaminates validation data. This supports byte-level SHA-256 admission,
-semantic/source grouping before splitting, and a future near-duplicate pass on
-transcripts before any training launch.
+## Retrieval choices
 
-- [Deduplicating Training Data Makes Language Models Better](https://arxiv.org/abs/2107.06499)
+SQLite FTS5 provides built-in full-text indexing and BM25 ranking, which is a
+good operational baseline for 5,000–50,000 compact records without another
+service. [SQLite FTS5 documentation](https://www.sqlite.org/fts5.html)
 
-### Naive train-wait-train risks forgetting
+Dense-vector search is abstracted behind `EmbeddingProvider`. The current local
+signed hashing vector is deterministic and dependency-free, not a production
+semantic model. At this corpus size, exact reranking of a bounded lexical/
+metadata candidate set is practical. Faiss remains an optional future backend;
+its own guidance notes that simple/exact approaches can be preferable when
+query volume or corpus size does not justify index-building complexity.
+[Faiss project](https://github.com/facebookresearch/faiss),
+[index-selection guidance](https://github.com/facebookresearch/faiss/wiki/Guidelines-to-choose-an-index)
 
-Continual fine-tuning can degrade prior capabilities. Research on instruction
-continual learning identifies replay as a practical baseline, while results
-vary with task similarity and ordering. The design therefore versions adapters,
-mixes new examples with a stratified replay buffer, and requires a fixed
-regression suite before promotion rather than simply continuing on each batch.
+Only the semantic projection is embedded: hook, mechanisms/devices, and clean
+script. Frame arrays, word acoustic arrays, full captions, and the raw 800 KB
+report are excluded because they add cost/noise and are already available via
+provenance when needed.
 
-- [An Empirical Study of Catastrophic Forgetting in Large Language Models During Continual Fine-tuning](https://arxiv.org/abs/2308.08747)
-- [InsCL: A Data-efficient Continual Learning Paradigm for Fine-tuning Large Language Models with Instructions](https://aclanthology.org/2024.naacl-long.37/)
-- [Fine-tuned Language Models are Continual Learners](https://aclanthology.org/2022.emnlp-main.410/)
+## Outcomes and Instagram
 
-### Parameter-efficient adaptation should be tested, not assumed
+Meta's official Instagram API workspace documents media insights and describes
+Reels shares, while Meta has also described total and average watch-time
+metrics for Reels. Metric availability and names can change, so the outcome
+schema permits platform-native extensions and never zero-fills unavailable
+fields. [Official Meta Instagram API workspace](https://www.postman.com/meta/instagram/overview),
+[Instagram Insights collection](https://www.postman.com/meta/instagram/folder/23987686-f659d7d1-d74c-44e4-9192-9b1e8694c511),
+[Meta Reels watch-time announcement](https://about.fb.com/news/2023/04/instagram-reels-trending-audio-and-gifts-updates/)
 
-LoRA freezes pretrained weights and learns low-rank updates; QLoRA extends this
-with a frozen quantized base. These methods make adaptation practical on
-limited hardware, but neither guarantees creative quality. A no-training
-prompt/retrieval baseline and human evaluation remain mandatory comparators.
+Views, reach, plays, watch time, and interactions are not comparable across
+accounts, follower sizes, niches, paid/organic distribution, geography, age, or
+measurement windows. The repository stores raw measurements and accepts an
+explicit externally computed cohort-normalization object; it does not invent a
+virality score.
 
-- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)
-- [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)
+## Leakage and memorization
 
-## Open decisions before training approval
+Exact/source dedupe alone does not prevent a rewritten or clipped transcript
+from crossing evaluation boundaries. The objective-layer leakage guard adds
+exact transcript, derived-source, and banded SimHash grouping. The dataset
+deduplication literature also reports reduced memorization and more reliable
+validation after near-duplicate removal.
+[Deduplicating Training Data Makes Language Models Better](https://arxiv.org/abs/2107.06499)
 
-1. Which outcome/analytics files will accompany extractor reports, and what is
-   their stable join key?
-2. Are all transcripts/scripts owned or licensed for model training?
-3. Which niches, languages, platforms, durations, and output schemas are in the
-   first model's scope?
-4. What GPU/RAM, latency, deployment target, and ongoing budget are available?
-5. Who supplies blinded editorial ratings and approves the frozen test set?
-6. What minimum batch size/quality threshold triggers a proposed run?
-7. Which base-model licenses are acceptable for commercial deployment?
+Generation context marks source text analysis-only. Offline evaluation measures
+contiguous and five-gram overlap. These are deterministic warning/gate signals,
+not a complete originality judgment.
 
-No responsible architecture can promise a perfect or viral model. It can make
-data lineage, evaluation, rollback, and continued improvement rigorous enough
-that quality claims are measurable instead of assumed.
+## Evaluation boundary
+
+Constraint, schema, timing, reference-integrity, and overlap checks can be
+deterministic. Hook quality, coherence, client fit, factual grounding, and
+originality require human or named/versioned model judgment. The current
+evaluator explicitly records them as not evaluated and does not collapse unlike
+dimensions into a fake aggregate score.
+
+## Open research before a production generator
+
+1. Label and audit a representative semantic set for topic, format, hook,
+   retention, story, persuasion, claim, and CTA taxonomies.
+2. Establish inter-rater agreement and uncertainty policy for editor judgments.
+3. Compare learned embedding providers against labeled retrieval queries.
+4. Define client-context storage, factual source provenance, and privacy rules.
+5. Ingest Instagram Insights with stable account/time cohorts and metric-version
+   tracking.
+6. Benchmark retrieval-first production generators using frozen fixtures and
+   blinded editor comparisons before considering any weight changes.

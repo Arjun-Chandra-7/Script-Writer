@@ -1,0 +1,2075 @@
+{
+  "compiler": {
+    "deterministic": true,
+    "name": "viralyst-script-intelligence-compiler",
+    "network_access": false,
+    "semantic_analyzer_version": "local-rules-1.0.0",
+    "version": "1.0.0"
+  },
+  "content": {
+    "clean_transcript": {
+      "confidence": 0.9183,
+      "evidence_type": "observed",
+      "method": "extractor_ASR_with_mean_word_confidence",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        }
+      ],
+      "value": "Let's talk about the richest man in the world, shall we? I gather you're not on the Earth. Well, I gather You're not on his Christmas card list anymore Okay, so I agree with him on various things. I agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in Ukraine using Starlink, so he's definitely done some good things but But what he's doing now with Doge is obscene. What's happening is he's cutting almost at random, lots of government workers. So good, honest people who go to work and do their job. He's accusing them of being corrupt and lazy and useless and just cutting their jobs. And it's gonna be terrible. It's gonna have terrible consequences on people. And he just doesn't seem to care. So the one thing, the only time I've seen him care was when I criticized him and he said I was cruel."
+    },
+    "content_format": {
+      "evidence_type": "unknown",
+      "reason": "speaker diarization and source format metadata are unavailable",
+      "sources": [],
+      "value": null
+    },
+    "estimated_audience_intent": {
+      "evidence_type": "unknown",
+      "reason": "audience intent is not observed in the extractor report",
+      "sources": [],
+      "value": null
+    },
+    "language": {
+      "confidence": 1.0,
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "$.transcript.language"
+        }
+      ],
+      "value": "en"
+    },
+    "normalized_transcript": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "NFKC_whitespace_lowercase_word_normalization_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        }
+      ],
+      "value": "let's talk about the richest man in the world shall we i gather you're not on the earth well i gather you're not on his christmas card list anymore okay so i agree with him on various things i agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in ukraine using starlink so he's definitely done some good things but but what he's doing now with doge is obscene what's happening is he's cutting almost at random lots of government workers so good honest people who go to work and do their job he's accusing them of being corrupt and lazy and useless and just cutting their jobs and it's gonna be terrible it's gonna have terrible consequences on people and he just doesn't seem to care so the one thing the only time i've seen him care was when i criticized him and he said i was cruel"
+    },
+    "spoken_word_count": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "compiler_tokenizer_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        }
+      ],
+      "value": 166
+    },
+    "subtopic": {
+      "evidence_type": "unknown",
+      "reason": "subtopic is not provided by the extractor",
+      "sources": [],
+      "value": null
+    },
+    "topic": {
+      "evidence_type": "unknown",
+      "reason": "topic is not provided by the extractor and local keyword inference is disabled",
+      "sources": [],
+      "value": null
+    },
+    "video_duration_seconds": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "$.source.duration_seconds"
+        }
+      ],
+      "value": 59.118
+    },
+    "words_per_second": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "word_count_divided_by_video_duration",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.source.duration_seconds"
+        }
+      ],
+      "value": 2.8079
+    }
+  },
+  "delivery": {
+    "emphasis_candidates": {
+      "confidence": 0.69,
+      "evidence_type": "heuristic_inference",
+      "method": "upstream_pitch_energy_duration_candidates",
+      "sources": [
+        {
+          "path": "$.transcript.emphasized_words"
+        }
+      ],
+      "value": [
+        {
+          "confidence": 0.841,
+          "duration_seconds": 0.18,
+          "end": 1.74,
+          "energy_above_local_words_db": 3.01,
+          "evidence": [
+            "high_local_energy",
+            "duration_lengthening"
+          ],
+          "is_stopword": false,
+          "pitch_f0_hz": 106.7,
+          "start": 1.56,
+          "verification_status": "candidate",
+          "word": "world,"
+        },
+        {
+          "confidence": 0.9,
+          "duration_seconds": 0.1,
+          "end": 23.98,
+          "energy_above_local_words_db": 6.82,
+          "evidence": [
+            "high_local_energy"
+          ],
+          "is_stopword": false,
+          "pitch_f0_hz": 140.4,
+          "start": 23.88,
+          "verification_status": "candidate",
+          "word": "he's"
+        },
+        {
+          "confidence": 0.9,
+          "duration_seconds": 0.08,
+          "end": 50.36,
+          "energy_above_local_words_db": 6.21,
+          "evidence": [
+            "high_local_energy",
+            "pitch_f0_elevation"
+          ],
+          "is_stopword": true,
+          "pitch_f0_hz": 152.4,
+          "start": 50.28,
+          "verification_status": "candidate",
+          "word": "And"
+        },
+        {
+          "confidence": 0.812,
+          "duration_seconds": 0.14,
+          "end": 54.22,
+          "energy_above_local_words_db": 4.84,
+          "evidence": [
+            "high_local_energy"
+          ],
+          "is_stopword": false,
+          "pitch_f0_hz": 192.8,
+          "start": 54.08,
+          "verification_status": "candidate",
+          "word": "only"
+        },
+        {
+          "confidence": 0.781,
+          "duration_seconds": 0.12,
+          "end": 54.9,
+          "energy_above_local_words_db": 4.22,
+          "evidence": [
+            "high_local_energy"
+          ],
+          "is_stopword": false,
+          "pitch_f0_hz": 140.4,
+          "start": 54.78,
+          "verification_status": "candidate",
+          "word": "him"
+        },
+        {
+          "confidence": 0.69,
+          "duration_seconds": 0.26,
+          "end": 56.38,
+          "energy_above_local_words_db": 0.0,
+          "evidence": [
+            "pitch_f0_elevation",
+            "duration_lengthening"
+          ],
+          "is_stopword": false,
+          "pitch_f0_hz": 179.8,
+          "start": 56.12,
+          "verification_status": "candidate",
+          "word": "criticized"
+        }
+      ]
+    },
+    "energy_changes": {
+      "evidence_type": "unknown",
+      "reason": "extractor provides word-level energy but no validated section-level energy-change events",
+      "sources": [],
+      "value": null
+    },
+    "pace_transitions": [
+      {
+        "at_seconds": 4.0,
+        "direction": "slower",
+        "evidence": {
+          "confidence": 1.0,
+          "evidence_type": "deterministic_derivation",
+          "method": "adjacent_rolling_window_delta_at_least_60_wpm",
+          "sources": [
+            {
+              "end_seconds": 8.0,
+              "path": "$.transcript.delivery.rolling_windows",
+              "start_seconds": 4.0
+            }
+          ],
+          "value": true
+        },
+        "from_wpm": 270.0,
+        "to_wpm": 195.0
+      },
+      {
+        "at_seconds": 6.0,
+        "direction": "slower",
+        "evidence": {
+          "confidence": 1.0,
+          "evidence_type": "deterministic_derivation",
+          "method": "adjacent_rolling_window_delta_at_least_60_wpm",
+          "sources": [
+            {
+              "end_seconds": 10.0,
+              "path": "$.transcript.delivery.rolling_windows",
+              "start_seconds": 6.0
+            }
+          ],
+          "value": true
+        },
+        "from_wpm": 195.0,
+        "to_wpm": 135.0
+      },
+      {
+        "at_seconds": 8.0,
+        "direction": "faster",
+        "evidence": {
+          "confidence": 1.0,
+          "evidence_type": "deterministic_derivation",
+          "method": "adjacent_rolling_window_delta_at_least_60_wpm",
+          "sources": [
+            {
+              "end_seconds": 12.0,
+              "path": "$.transcript.delivery.rolling_windows",
+              "start_seconds": 8.0
+            }
+          ],
+          "value": true
+        },
+        "from_wpm": 135.0,
+        "to_wpm": 195.0
+      },
+      {
+        "at_seconds": 12.0,
+        "direction": "slower",
+        "evidence": {
+          "confidence": 1.0,
+          "evidence_type": "deterministic_derivation",
+          "method": "adjacent_rolling_window_delta_at_least_60_wpm",
+          "sources": [
+            {
+              "end_seconds": 16.0,
+              "path": "$.transcript.delivery.rolling_windows",
+              "start_seconds": 12.0
+            }
+          ],
+          "value": true
+        },
+        "from_wpm": 180.0,
+        "to_wpm": 105.0
+      },
+      {
+        "at_seconds": 36.0,
+        "direction": "faster",
+        "evidence": {
+          "confidence": 1.0,
+          "evidence_type": "deterministic_derivation",
+          "method": "adjacent_rolling_window_delta_at_least_60_wpm",
+          "sources": [
+            {
+              "end_seconds": 40.0,
+              "path": "$.transcript.delivery.rolling_windows",
+              "start_seconds": 36.0
+            }
+          ],
+          "value": true
+        },
+        "from_wpm": 105.0,
+        "to_wpm": 165.0
+      },
+      {
+        "at_seconds": 38.0,
+        "direction": "faster",
+        "evidence": {
+          "confidence": 1.0,
+          "evidence_type": "deterministic_derivation",
+          "method": "adjacent_rolling_window_delta_at_least_60_wpm",
+          "sources": [
+            {
+              "end_seconds": 42.0,
+              "path": "$.transcript.delivery.rolling_windows",
+              "start_seconds": 38.0
+            }
+          ],
+          "value": true
+        },
+        "from_wpm": 165.0,
+        "to_wpm": 225.0
+      },
+      {
+        "at_seconds": 54.0,
+        "direction": "faster",
+        "evidence": {
+          "confidence": 1.0,
+          "evidence_type": "deterministic_derivation",
+          "method": "adjacent_rolling_window_delta_at_least_60_wpm",
+          "sources": [
+            {
+              "end_seconds": 58.0,
+              "path": "$.transcript.delivery.rolling_windows",
+              "start_seconds": 54.0
+            }
+          ],
+          "value": true
+        },
+        "from_wpm": 195.0,
+        "to_wpm": 255.0
+      },
+      {
+        "at_seconds": 56.0,
+        "direction": "slower",
+        "evidence": {
+          "confidence": 1.0,
+          "evidence_type": "deterministic_derivation",
+          "method": "adjacent_rolling_window_delta_at_least_60_wpm",
+          "sources": [
+            {
+              "end_seconds": 60.0,
+              "path": "$.transcript.delivery.rolling_windows",
+              "start_seconds": 56.0
+            }
+          ],
+          "value": true
+        },
+        "from_wpm": 255.0,
+        "to_wpm": 135.0
+      }
+    ],
+    "pace_words_per_minute": {
+      "evidence_type": "observed",
+      "method": "extractor_measured",
+      "sources": [
+        {
+          "path": "$.transcript.delivery.overall_words_per_minute"
+        }
+      ],
+      "value": 172.8
+    },
+    "pace_words_per_second": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "token_count_divided_by_speaking_span",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.delivery.speaking_span_seconds"
+        }
+      ],
+      "value": 2.8799
+    },
+    "pauses": {
+      "evidence_type": "observed",
+      "method": "extractor_word_timing_gaps",
+      "sources": [
+        {
+          "path": "$.transcript.pauses"
+        }
+      ],
+      "value": [
+        {
+          "after_word": "we?",
+          "duration": 0.18,
+          "end": 2.34,
+          "start": 2.16,
+          "type": "micro"
+        },
+        {
+          "after_word": "anymore",
+          "duration": 0.48,
+          "end": 6.56,
+          "start": 6.08,
+          "type": "short"
+        },
+        {
+          "after_word": "things.",
+          "duration": 0.4,
+          "end": 10.1,
+          "start": 9.7,
+          "type": "micro"
+        },
+        {
+          "after_word": "and",
+          "duration": 1.74,
+          "end": 20.74,
+          "start": 19.0,
+          "type": "long"
+        },
+        {
+          "after_word": "Starlink,",
+          "duration": 0.16,
+          "end": 23.24,
+          "start": 23.08,
+          "type": "micro"
+        },
+        {
+          "after_word": "obscene.",
+          "duration": 1.2,
+          "end": 32.46,
+          "start": 31.26,
+          "type": "long"
+        },
+        {
+          "after_word": "random,",
+          "duration": 0.8,
+          "end": 36.84,
+          "start": 36.04,
+          "type": "short"
+        },
+        {
+          "after_word": "workers.",
+          "duration": 0.3,
+          "end": 38.52,
+          "start": 38.22,
+          "type": "micro"
+        },
+        {
+          "after_word": "job.",
+          "duration": 0.42,
+          "end": 41.36,
+          "start": 40.94,
+          "type": "micro"
+        },
+        {
+          "after_word": "useless",
+          "duration": 0.56,
+          "end": 44.18,
+          "start": 43.62,
+          "type": "short"
+        },
+        {
+          "after_word": "jobs.",
+          "duration": 1.66,
+          "end": 47.02,
+          "start": 45.36,
+          "type": "long"
+        },
+        {
+          "after_word": "terrible.",
+          "duration": 0.3,
+          "end": 48.3,
+          "start": 48.0,
+          "type": "micro"
+        },
+        {
+          "after_word": "people.",
+          "duration": 0.42,
+          "end": 50.28,
+          "start": 49.86,
+          "type": "micro"
+        },
+        {
+          "after_word": "care.",
+          "duration": 1.1,
+          "end": 52.78,
+          "start": 51.68,
+          "type": "long"
+        },
+        {
+          "after_word": "thing,",
+          "duration": 0.16,
+          "end": 53.68,
+          "start": 53.52,
+          "type": "micro"
+        },
+        {
+          "after_word": "care",
+          "duration": 0.36,
+          "end": 55.54,
+          "start": 55.18,
+          "type": "micro"
+        }
+      ]
+    },
+    "sentence_cadence": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "sentence_word_count_divided_by_aligned_duration",
+      "sources": [
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": [
+        {
+          "end_seconds": 2.16,
+          "sentence_id": 0,
+          "start_seconds": 0.0,
+          "word_count": 11,
+          "words_per_second": 5.093
+        },
+        {
+          "end_seconds": 3.38,
+          "sentence_id": 1,
+          "start_seconds": 2.34,
+          "word_count": 7,
+          "words_per_second": 6.731
+        },
+        {
+          "end_seconds": 9.7,
+          "sentence_id": 2,
+          "start_seconds": 3.52,
+          "word_count": 20,
+          "words_per_second": 3.236
+        },
+        {
+          "end_seconds": 31.26,
+          "sentence_id": 3,
+          "start_seconds": 10.1,
+          "word_count": 48,
+          "words_per_second": 2.268
+        },
+        {
+          "end_seconds": 38.22,
+          "sentence_id": 4,
+          "start_seconds": 32.46,
+          "word_count": 12,
+          "words_per_second": 2.083
+        },
+        {
+          "end_seconds": 40.94,
+          "sentence_id": 5,
+          "start_seconds": 38.52,
+          "word_count": 12,
+          "words_per_second": 4.959
+        },
+        {
+          "end_seconds": 45.36,
+          "sentence_id": 6,
+          "start_seconds": 41.36,
+          "word_count": 15,
+          "words_per_second": 3.75
+        },
+        {
+          "end_seconds": 48.0,
+          "sentence_id": 7,
+          "start_seconds": 47.02,
+          "word_count": 5,
+          "words_per_second": 5.102
+        },
+        {
+          "end_seconds": 49.86,
+          "sentence_id": 8,
+          "start_seconds": 48.3,
+          "word_count": 7,
+          "words_per_second": 4.487
+        },
+        {
+          "end_seconds": 51.68,
+          "sentence_id": 9,
+          "start_seconds": 50.28,
+          "word_count": 7,
+          "words_per_second": 5.0
+        },
+        {
+          "end_seconds": 57.64,
+          "sentence_id": 10,
+          "start_seconds": 52.78,
+          "word_count": 22,
+          "words_per_second": 4.527
+        }
+      ]
+    },
+    "silence_ranges": {
+      "evidence_type": "observed",
+      "method": "extractor_audio_measurement",
+      "sources": [
+        {
+          "path": "$.audio.events.silence_ranges"
+        }
+      ],
+      "value": [
+        {
+          "end": 26.0,
+          "start": 25.0
+        },
+        {
+          "end": 32.5,
+          "start": 31.5
+        }
+      ]
+    },
+    "speech_rhythm": {
+      "evidence_type": "unknown",
+      "reason": "a stable speech-rhythm taxonomy has not been defined",
+      "sources": [],
+      "value": null
+    }
+  },
+  "hook_intelligence": {
+    "end_seconds": 3.38,
+    "mechanisms": [
+      {
+        "end_seconds": 3.38,
+        "evidence": {
+          "confidence": 0.97,
+          "evidence_type": "heuristic_inference",
+          "method": "hook_contains_question_mark",
+          "sources": [
+            {
+              "end_seconds": 3.38,
+              "path": "$.transcript.full_text",
+              "start_seconds": 0.0
+            }
+          ],
+          "value": true
+        },
+        "mechanism": "question",
+        "start_seconds": 0.0,
+        "text": "Let's talk about the richest man in the world, shall we? I gather you're not on the Earth."
+      },
+      {
+        "end_seconds": 3.38,
+        "evidence": {
+          "confidence": 0.62,
+          "evidence_type": "heuristic_inference",
+          "method": "authority_reference_rules_v1",
+          "sources": [
+            {
+              "end_seconds": 3.38,
+              "path": "$.transcript.full_text",
+              "start_seconds": 0.0
+            }
+          ],
+          "value": true
+        },
+        "mechanism": "authority",
+        "start_seconds": 0.0,
+        "text": "Let's talk about the richest man in the world, shall we? I gather you're not on the Earth."
+      }
+    ],
+    "multi_label": true,
+    "start_seconds": 0.0,
+    "text": "Let's talk about the richest man in the world, shall we? I gather you're not on the Earth."
+  },
+  "identity": {
+    "extractor_version": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "$.processing.extractor_version"
+        }
+      ],
+      "value": "2026.08.evidence-first"
+    },
+    "platform": {
+      "evidence_type": "unknown",
+      "reason": "platform is not present in the extractor report or enrichment context",
+      "sources": [],
+      "value": null
+    },
+    "report_id": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "$.report_id"
+        }
+      ],
+      "value": "86c1671e8a3a7b46"
+    },
+    "source_artifact_sha256": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "sha256_of_raw_report_bytes",
+      "sources": [
+        {
+          "path": "$raw_bytes"
+        }
+      ],
+      "value": "74c0ecb42de66a2d3d9f31ea45146e11d50396036c2ddfc53f4d1d8c23d1aec2"
+    },
+    "source_content_hash": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "$.source.content_hash"
+        }
+      ],
+      "value": "277de2b59f2be8f88047b631ed1e5de4"
+    },
+    "source_created_at": {
+      "evidence_type": "unknown",
+      "reason": "source publication timestamp is not present",
+      "sources": [],
+      "value": null
+    },
+    "source_filename": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "$.source.filename"
+        }
+      ],
+      "value": "The Godfather of AI on his Feud with Elon Musk - TVO Today (1080p).mp4"
+    },
+    "source_modified_at": {
+      "evidence_type": "unknown",
+      "reason": "source modification timestamp is not present inside the report",
+      "sources": [],
+      "value": null
+    }
+  },
+  "index_projections": {
+    "embedding_policy": {
+      "do_not_embed": [
+        "raw extractor JSON",
+        "frame arrays",
+        "word-level acoustic arrays",
+        "unverified hidden metadata"
+      ],
+      "embed": [
+        "semantic_text",
+        "hook text and mechanisms",
+        "section/beat summaries"
+      ]
+    },
+    "lexical_text": "Let's talk about the richest man in the world, shall we? I gather you're not on the Earth. Well, I gather You're not on his Christmas card list anymore Okay, so I agree with him on various things. I agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in Ukraine using Starlink, so he's definitely done some good things but But what he's doing now with Doge is obscene. What's happening is he's cutting almost at random, lots of government workers. So good, honest people who go to work and do their job. He's accusing them of being corrupt and lazy and useless and just cutting their jobs. And it's gonna be terrible. It's gonna have terrible consequences on people. And he just doesn't seem to care. So the one thing, the only time I've seen him care was when I criticized him and he said I was cruel.",
+    "semantic_text": "Hook: Let's talk about the richest man in the world, shall we? I gather you're not on the Earth.. Mechanisms: question authority. Devices: rhetorical or prompt question direct address direct address contrast example or proof stakes language stakes language stakes language specificity. Script: Let's talk about the richest man in the world, shall we? I gather you're not on the Earth. Well, I gather You're not on his Christmas card list anymore Okay, so I agree with him on various things. I agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in Ukraine using Starlink, so he's definitely done some good things but But what he's doing now with Doge is obscene. What's happening is he's cutting almost at random, lots of government workers. So good, honest people who go to work and do their job. He's accusing them of being corrupt and lazy and useless and just cutting their jobs. And it's gonna be terrible. It's gonna have terrible consequences on people. And he just doesn't seem to care. So the one thing, the only time I've seen him care was when I criticized him and he said I was cruel.",
+    "structural_fingerprint": [
+      "edit:overlay_highlights_spoken_words",
+      "edit:upstream_cross_modal_interpretation",
+      "edit:verified_edit_near_sentence_boundary",
+      "hook:authority",
+      "hook:question",
+      "retention:contrast",
+      "retention:direct_address",
+      "retention:example_or_proof",
+      "retention:rhetorical_or_prompt_question",
+      "retention:specificity",
+      "retention:stakes_language",
+      "section:conclusion",
+      "section:hook",
+      "section:payoff",
+      "section:proof",
+      "section:question",
+      "section:setup"
+    ]
+  },
+  "information_density": {
+    "actionable_steps": {
+      "evidence_type": "unknown",
+      "reason": "claim/fact classification requires a versioned semantic analyzer",
+      "sources": [],
+      "value": null
+    },
+    "anecdotes": {
+      "evidence_type": "unknown",
+      "reason": "claim/fact classification requires a versioned semantic analyzer",
+      "sources": [],
+      "value": null
+    },
+    "claims": {
+      "evidence_type": "unknown",
+      "reason": "claim/fact classification requires a versioned semantic analyzer",
+      "sources": [],
+      "value": null
+    },
+    "density_over_time": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "non_overlapping_10_second_lexical_windows_v1",
+      "sources": [
+        {
+          "path": "$.transcript.sentences"
+        },
+        {
+          "path": "$.source.duration_seconds"
+        }
+      ],
+      "value": [
+        {
+          "end_seconds": 10.0,
+          "example_marker_count": 0,
+          "numerical_reference_count": 0,
+          "question_count": 1,
+          "sentence_count": 3,
+          "start_seconds": 0.0,
+          "word_count": 38
+        },
+        {
+          "end_seconds": 20.0,
+          "example_marker_count": 1,
+          "numerical_reference_count": 0,
+          "question_count": 0,
+          "sentence_count": 1,
+          "start_seconds": 10.0,
+          "word_count": 48
+        },
+        {
+          "end_seconds": 30.0,
+          "example_marker_count": 0,
+          "numerical_reference_count": 0,
+          "question_count": 0,
+          "sentence_count": 0,
+          "start_seconds": 20.0,
+          "word_count": 0
+        },
+        {
+          "end_seconds": 40.0,
+          "example_marker_count": 0,
+          "numerical_reference_count": 0,
+          "question_count": 0,
+          "sentence_count": 2,
+          "start_seconds": 30.0,
+          "word_count": 24
+        },
+        {
+          "end_seconds": 50.0,
+          "example_marker_count": 0,
+          "numerical_reference_count": 0,
+          "question_count": 0,
+          "sentence_count": 3,
+          "start_seconds": 40.0,
+          "word_count": 27
+        },
+        {
+          "end_seconds": 59.118,
+          "example_marker_count": 0,
+          "numerical_reference_count": 1,
+          "question_count": 0,
+          "sentence_count": 2,
+          "start_seconds": 50.0,
+          "word_count": 29
+        }
+      ]
+    },
+    "examples": {
+      "confidence": 0.76,
+      "evidence_type": "heuristic_inference",
+      "method": "explicit_example_marker_rules_v1",
+      "sources": [
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": [
+        {
+          "device": "example_or_proof",
+          "end_seconds": 31.26,
+          "evidence": {
+            "confidence": 0.76,
+            "evidence_type": "heuristic_inference",
+            "method": "example_marker_rules_v1",
+            "sources": [
+              {
+                "end_seconds": 31.26,
+                "path": "$.transcript.sentences",
+                "start_seconds": 10.1
+              }
+            ],
+            "value": true
+          },
+          "start_seconds": 10.1,
+          "text": "I agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in Ukraine using Starlink, so he's definitely done some good things but But what he's doing now with Doge is obscene."
+        }
+      ]
+    },
+    "facts": {
+      "evidence_type": "unknown",
+      "reason": "claim/fact classification requires a versioned semantic analyzer",
+      "sources": [],
+      "value": null
+    },
+    "redundancy_proxy": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "one_minus_type_token_ratio_not_semantic_redundancy",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        }
+      ],
+      "value": 0.3735
+    }
+  },
+  "linguistic_characteristics": {
+    "emotional_language_note": {
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "method": "small_versioned_emotion_lexicon_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        }
+      ],
+      "value": "lexicon_matches_only"
+    },
+    "emotional_lexicon_matches": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_emotional_lexicon_matches_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": [
+        "cruel",
+        "obscene",
+        "terrible",
+        "threat"
+      ]
+    },
+    "imperative_candidate_count": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_imperative_candidate_count_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": 0
+    },
+    "imperative_candidate_density": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_imperative_candidate_density_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": 0.0
+    },
+    "imperative_density_note": {
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "method": "sentence_initial_imperative_lexicon_without_POS_parser",
+      "sources": [
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": "candidate_only"
+    },
+    "numerical_reference_count": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_numerical_reference_count_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": 1
+    },
+    "parallelism": {
+      "evidence_type": "unknown",
+      "reason": "requires syntactic or semantic analysis",
+      "sources": [],
+      "value": null
+    },
+    "person_usage": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_person_usage_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": {
+        "first_person_count": 8,
+        "second_person_count": 2,
+        "third_person_count": 12
+      }
+    },
+    "punchiness": {
+      "confidence": 0.6,
+      "evidence_type": "heuristic_inference",
+      "method": "sentences_at_most_8_words_proxy",
+      "sources": [
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": {
+        "short_sentence_share": 0.3636
+      }
+    },
+    "question_count": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_question_count_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": 1
+    },
+    "question_density_per_sentence": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_question_density_per_sentence_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": 0.0909
+    },
+    "repeated_content_tokens": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_repeated_content_tokens_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": {
+        "good": 3,
+        "he's": 5,
+        "people": 3,
+        "things": 3,
+        "with": 3
+      }
+    },
+    "sentence_length_distribution": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_sentence_length_distribution_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": {
+        "count": 11,
+        "max_words": 48,
+        "mean_words": 15.091,
+        "median_words": 12,
+        "min_words": 5,
+        "p90_words": 22.0,
+        "word_lengths": [
+          11,
+          7,
+          20,
+          48,
+          12,
+          12,
+          15,
+          5,
+          7,
+          7,
+          22
+        ]
+      }
+    },
+    "short_sentence_share": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_short_sentence_share_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": 0.3636
+    },
+    "slang_or_informal_matches": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_slang_or_informal_matches_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": [
+        "gonna",
+        "okay"
+      ]
+    },
+    "transition_markers": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_transition_markers_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": [
+        {
+          "count": 2,
+          "transition": "but"
+        },
+        {
+          "count": 1,
+          "transition": "for example"
+        },
+        {
+          "count": 1,
+          "transition": "now"
+        },
+        {
+          "count": 4,
+          "transition": "so"
+        }
+      ]
+    },
+    "vocabulary": {
+      "confidence": 1.0,
+      "evidence_type": "deterministic_derivation",
+      "method": "deterministic_vocabulary_v1",
+      "sources": [
+        {
+          "path": "$.transcript.full_text"
+        },
+        {
+          "path": "$.transcript.sentences"
+        }
+      ],
+      "value": {
+        "average_token_characters": 4.349,
+        "long_word_share": 0.0843,
+        "token_count": 166,
+        "type_token_ratio": 0.6265,
+        "unique_token_count": 104
+      }
+    }
+  },
+  "persuasion": {
+    "authority": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "cta_mechanism": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "desired_outcome": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "evidence": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "objection_handling": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "pain": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "promise": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "proof": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "risk_reversal": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "scarcity": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "social_proof": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    },
+    "urgency": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference beyond reliable local rules",
+      "sources": [],
+      "value": null
+    }
+  },
+  "quality": {
+    "content_evidence_available": true,
+    "deferred_upstream_features": [
+      "speaker_diarization"
+    ],
+    "outcome_evidence_available": false,
+    "performance_claims_allowed": false,
+    "unknown_or_unreliable_fields": [
+      "script_structure.progression",
+      "script_structure.climax",
+      "script_structure.cta",
+      "storytelling.*",
+      "persuasion.*",
+      "information_density.claims/facts/anecdotes/actionable_steps",
+      "delivery.energy_changes",
+      "delivery.speech_rhythm",
+      "identity.platform",
+      "content.topic",
+      "content.subtopic",
+      "content.content_format",
+      "content.audience_intent"
+    ],
+    "upstream_confidence_policy": {
+      "calibration_basis": "Empirical precision/recall target >= 0.85 across labeled edit corpus.",
+      "minimum_training_confidence": 0.8,
+      "policy": "Only verified observed facts at or above threshold are eligible for Core Brain training."
+    },
+    "warnings": [
+      "upstream semantic section labels are preserved as unverified hypotheses",
+      "hook and retention mechanism rules are heuristic, not ground truth",
+      "no publication timestamp or outcome metadata was supplied",
+      "platform/topic/audience metadata was not supplied"
+    ]
+  },
+  "record_id": "sir:277de2b59f2be8f88047b631ed1e5de4:1.0.0",
+  "retention_devices": [
+    {
+      "device": "rhetorical_or_prompt_question",
+      "end_seconds": 2.16,
+      "evidence": {
+        "confidence": 0.68,
+        "evidence_type": "heuristic_inference",
+        "method": "question_mark_rule",
+        "sources": [
+          {
+            "end_seconds": 2.16,
+            "path": "$.transcript.sentences",
+            "start_seconds": 0.0
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 0.0,
+      "text": "Let's talk about the richest man in the world, shall we?"
+    },
+    {
+      "device": "direct_address",
+      "end_seconds": 3.38,
+      "evidence": {
+        "confidence": 0.9,
+        "evidence_type": "heuristic_inference",
+        "method": "second_person_pronoun_rule",
+        "sources": [
+          {
+            "end_seconds": 3.38,
+            "path": "$.transcript.sentences",
+            "start_seconds": 2.34
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 2.34,
+      "text": "I gather you're not on the Earth."
+    },
+    {
+      "device": "direct_address",
+      "end_seconds": 9.7,
+      "evidence": {
+        "confidence": 0.9,
+        "evidence_type": "heuristic_inference",
+        "method": "second_person_pronoun_rule",
+        "sources": [
+          {
+            "end_seconds": 9.7,
+            "path": "$.transcript.sentences",
+            "start_seconds": 3.52
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 3.52,
+      "text": "Well, I gather You're not on his Christmas card list anymore Okay, so I agree with him on various things."
+    },
+    {
+      "device": "contrast",
+      "end_seconds": 31.26,
+      "evidence": {
+        "confidence": 0.82,
+        "evidence_type": "heuristic_inference",
+        "method": "contrast_marker_rules_v1",
+        "sources": [
+          {
+            "end_seconds": 31.26,
+            "path": "$.transcript.sentences",
+            "start_seconds": 10.1
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 10.1,
+      "text": "I agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in Ukraine using Starlink, so he's definitely done some good things but But what he's doing now with Doge is obscene."
+    },
+    {
+      "device": "example_or_proof",
+      "end_seconds": 31.26,
+      "evidence": {
+        "confidence": 0.76,
+        "evidence_type": "heuristic_inference",
+        "method": "example_marker_rules_v1",
+        "sources": [
+          {
+            "end_seconds": 31.26,
+            "path": "$.transcript.sentences",
+            "start_seconds": 10.1
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 10.1,
+      "text": "I agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in Ukraine using Starlink, so he's definitely done some good things but But what he's doing now with Doge is obscene."
+    },
+    {
+      "device": "stakes_language",
+      "end_seconds": 31.26,
+      "evidence": {
+        "confidence": 0.67,
+        "evidence_type": "heuristic_inference",
+        "method": "stakes_lexicon_rules_v1",
+        "sources": [
+          {
+            "end_seconds": 31.26,
+            "path": "$.transcript.sentences",
+            "start_seconds": 10.1
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 10.1,
+      "text": "I agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in Ukraine using Starlink, so he's definitely done some good things but But what he's doing now with Doge is obscene."
+    },
+    {
+      "device": "stakes_language",
+      "end_seconds": 48.0,
+      "evidence": {
+        "confidence": 0.67,
+        "evidence_type": "heuristic_inference",
+        "method": "stakes_lexicon_rules_v1",
+        "sources": [
+          {
+            "end_seconds": 48.0,
+            "path": "$.transcript.sentences",
+            "start_seconds": 47.02
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 47.02,
+      "text": "And it's gonna be terrible."
+    },
+    {
+      "device": "stakes_language",
+      "end_seconds": 49.86,
+      "evidence": {
+        "confidence": 0.67,
+        "evidence_type": "heuristic_inference",
+        "method": "stakes_lexicon_rules_v1",
+        "sources": [
+          {
+            "end_seconds": 49.86,
+            "path": "$.transcript.sentences",
+            "start_seconds": 48.3
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 48.3,
+      "text": "It's gonna have terrible consequences on people."
+    },
+    {
+      "device": "specificity",
+      "end_seconds": 57.64,
+      "evidence": {
+        "confidence": 0.73,
+        "evidence_type": "heuristic_inference",
+        "method": "specificity_marker_rules_v1",
+        "sources": [
+          {
+            "end_seconds": 57.64,
+            "path": "$.transcript.sentences",
+            "start_seconds": 52.78
+          }
+        ],
+        "value": true
+      },
+      "start_seconds": 52.78,
+      "text": "So the one thing, the only time I've seen him care was when I criticized him and he said I was cruel."
+    }
+  ],
+  "schema_version": "1.0.0",
+  "script_edit_relationships": [
+    {
+      "edit_type": "jump_cut",
+      "evidence": {
+        "confidence": 1.0,
+        "evidence_type": "deterministic_derivation",
+        "method": "nearest_verified_edit_to_sentence_boundary_within_0.4_seconds",
+        "sources": [
+          {
+            "end_seconds": 2.1833,
+            "path": "$.editing.verified_events[0]",
+            "start_seconds": 2.1833
+          },
+          {
+            "end_seconds": 2.16,
+            "path": "$.transcript.sentences",
+            "start_seconds": 0.0
+          }
+        ],
+        "value": {
+          "boundary_distance_seconds": 0.0233
+        }
+      },
+      "relationship": "verified_edit_near_sentence_boundary",
+      "script_span": {
+        "end_seconds": 2.16,
+        "start_seconds": 0.0,
+        "text": "Let's talk about the richest man in the world, shall we?"
+      },
+      "timestamp_seconds": 2.1833
+    },
+    {
+      "edit_type": "hard_cut",
+      "evidence": {
+        "confidence": 1.0,
+        "evidence_type": "deterministic_derivation",
+        "method": "nearest_verified_edit_to_sentence_boundary_within_0.4_seconds",
+        "sources": [
+          {
+            "end_seconds": 3.5833,
+            "path": "$.editing.verified_events[1]",
+            "start_seconds": 3.5833
+          },
+          {
+            "end_seconds": 9.7,
+            "path": "$.transcript.sentences",
+            "start_seconds": 3.52
+          }
+        ],
+        "value": {
+          "boundary_distance_seconds": 0.0633
+        }
+      },
+      "relationship": "verified_edit_near_sentence_boundary",
+      "script_span": {
+        "end_seconds": 9.7,
+        "start_seconds": 3.52,
+        "text": "Well, I gather You're not on his Christmas card list anymore Okay, so I agree with him on various things."
+      },
+      "timestamp_seconds": 3.5833
+    },
+    {
+      "evidence": {
+        "confidence": 0.915,
+        "evidence_type": "heuristic_inference",
+        "method": "preserved_upstream_cross_modal_interpretation",
+        "sources": [
+          {
+            "end_seconds": 2.2,
+            "path": "$.cross_modal_events[0]",
+            "start_seconds": 2.1667
+          }
+        ],
+        "value": true
+      },
+      "interpretations": [
+        "hook_emphasis",
+        "pacing_reset",
+        "question_prompt_cut"
+      ],
+      "relationship": "upstream_cross_modal_interpretation",
+      "script_span": {
+        "end_seconds": 2.2,
+        "start_seconds": 2.1667,
+        "text": null
+      },
+      "timestamp_seconds": 2.1667
+    },
+    {
+      "evidence": {
+        "confidence": 0.4,
+        "evidence_type": "observed",
+        "method": "extractor_observed_overlay_and_alignment",
+        "sources": [
+          {
+            "end_seconds": 13.25,
+            "path": "$.text_overlay.caption_analysis.captions[22]",
+            "start_seconds": 11.25
+          }
+        ],
+        "value": true
+      },
+      "highlighted_words": [
+        "A.I.)"
+      ],
+      "relationship": "overlay_highlights_spoken_words",
+      "script_span": {
+        "end_seconds": 13.25,
+        "start_seconds": 11.25,
+        "text": "(of A.I.) for example."
+      },
+      "timestamp_seconds": 11.25
+    },
+    {
+      "evidence": {
+        "confidence": 1.0,
+        "evidence_type": "observed",
+        "method": "extractor_observed_overlay_and_alignment",
+        "sources": [
+          {
+            "end_seconds": 32.75,
+            "path": "$.text_overlay.caption_analysis.captions[36]",
+            "start_seconds": 28.75
+          }
+        ],
+        "value": true
+      },
+      "highlighted_words": [
+        "DOGE"
+      ],
+      "relationship": "overlay_highlights_spoken_words",
+      "script_span": {
+        "end_seconds": 32.75,
+        "start_seconds": 28.75,
+        "text": "with DOGE"
+      },
+      "timestamp_seconds": 28.75
+    }
+  ],
+  "script_structure": {
+    "climax": {
+      "evidence_type": "unknown",
+      "reason": "no verified climax label exists in the extractor",
+      "sources": [],
+      "value": null
+    },
+    "cta": {
+      "evidence_type": "unknown",
+      "reason": "no section with role in ['call_to_action', 'cta'] was available",
+      "sources": [],
+      "value": null
+    },
+    "ending_type": {
+      "evidence_type": "unknown",
+      "reason": "ending type needs semantic inference",
+      "sources": [],
+      "value": null
+    },
+    "hook": {
+      "confidence": 0.65,
+      "evidence_type": "heuristic_inference",
+      "method": "preserved_upstream_structural_hypothesis",
+      "sources": [
+        {
+          "end_seconds": 3.38,
+          "path": "$.semantic.sections",
+          "start_seconds": 0.0
+        }
+      ],
+      "value": {
+        "end_seconds": 3.38,
+        "role": "hook",
+        "start_seconds": 0.0,
+        "text": "Let's talk about the richest man in the world, shall we? I gather you're not on the Earth."
+      }
+    },
+    "major_beats": [
+      {
+        "end_seconds": 3.38,
+        "evidence": {
+          "confidence": 0.65,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 3.38,
+              "path": "$.semantic.sections[0]",
+              "start_seconds": 0.0
+            }
+          ],
+          "value": true
+        },
+        "role": "hook",
+        "section_id": "0",
+        "start_seconds": 0.0,
+        "text": "Let's talk about the richest man in the world, shall we? I gather you're not on the Earth.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 9.7,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 9.7,
+              "path": "$.semantic.sections[1]",
+              "start_seconds": 3.52
+            }
+          ],
+          "value": true
+        },
+        "role": "setup",
+        "section_id": "1",
+        "start_seconds": 3.52,
+        "text": "Well, I gather You're not on his Christmas card list anymore Okay, so I agree with him on various things.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 31.26,
+        "evidence": {
+          "confidence": 0.6,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 31.26,
+              "path": "$.semantic.sections[2]",
+              "start_seconds": 10.1
+            }
+          ],
+          "value": true
+        },
+        "role": "proof",
+        "section_id": "2",
+        "start_seconds": 10.1,
+        "text": "I agree with him on the existential threat for example he takes it seriously and he's done some good things like electric cars and communications for people in Ukraine using Starlink, so he's definitely done some good things but But what he's doing now with Doge is obscene.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 38.22,
+        "evidence": {
+          "confidence": 0.65,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 38.22,
+              "path": "$.semantic.sections[3]",
+              "start_seconds": 32.46
+            }
+          ],
+          "value": true
+        },
+        "role": "question",
+        "section_id": "3",
+        "start_seconds": 32.46,
+        "text": "What's happening is he's cutting almost at random, lots of government workers.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 40.94,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 40.94,
+              "path": "$.semantic.sections[4]",
+              "start_seconds": 38.52
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "4",
+        "start_seconds": 38.52,
+        "text": "So good, honest people who go to work and do their job.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 45.36,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 45.36,
+              "path": "$.semantic.sections[5]",
+              "start_seconds": 41.36
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "5",
+        "start_seconds": 41.36,
+        "text": "He's accusing them of being corrupt and lazy and useless and just cutting their jobs.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 48.0,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 48.0,
+              "path": "$.semantic.sections[6]",
+              "start_seconds": 47.02
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "6",
+        "start_seconds": 47.02,
+        "text": "And it's gonna be terrible.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 49.86,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 49.86,
+              "path": "$.semantic.sections[7]",
+              "start_seconds": 48.3
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "7",
+        "start_seconds": 48.3,
+        "text": "It's gonna have terrible consequences on people.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 51.68,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 51.68,
+              "path": "$.semantic.sections[8]",
+              "start_seconds": 50.28
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "8",
+        "start_seconds": 50.28,
+        "text": "And he just doesn't seem to care.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 57.64,
+        "evidence": {
+          "confidence": 0.6,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 57.64,
+              "path": "$.semantic.sections[9]",
+              "start_seconds": 52.78
+            }
+          ],
+          "value": true
+        },
+        "role": "conclusion",
+        "section_id": "9",
+        "start_seconds": 52.78,
+        "text": "So the one thing, the only time I've seen him care was when I criticized him and he said I was cruel.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      }
+    ],
+    "payoff": [
+      {
+        "end_seconds": 40.94,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 40.94,
+              "path": "$.semantic.sections[4]",
+              "start_seconds": 38.52
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "4",
+        "start_seconds": 38.52,
+        "text": "So good, honest people who go to work and do their job.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 45.36,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 45.36,
+              "path": "$.semantic.sections[5]",
+              "start_seconds": 41.36
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "5",
+        "start_seconds": 41.36,
+        "text": "He's accusing them of being corrupt and lazy and useless and just cutting their jobs.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 48.0,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 48.0,
+              "path": "$.semantic.sections[6]",
+              "start_seconds": 47.02
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "6",
+        "start_seconds": 47.02,
+        "text": "And it's gonna be terrible.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 49.86,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 49.86,
+              "path": "$.semantic.sections[7]",
+              "start_seconds": 48.3
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "7",
+        "start_seconds": 48.3,
+        "text": "It's gonna have terrible consequences on people.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 51.68,
+        "evidence": {
+          "confidence": 0.55,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 51.68,
+              "path": "$.semantic.sections[8]",
+              "start_seconds": 50.28
+            }
+          ],
+          "value": true
+        },
+        "role": "payoff",
+        "section_id": "8",
+        "start_seconds": 50.28,
+        "text": "And he just doesn't seem to care.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      },
+      {
+        "end_seconds": 57.64,
+        "evidence": {
+          "confidence": 0.6,
+          "evidence_type": "heuristic_inference",
+          "method": "multimodal_linguistic_and_pacing_heuristics",
+          "sources": [
+            {
+              "end_seconds": 57.64,
+              "path": "$.semantic.sections[9]",
+              "start_seconds": 52.78
+            }
+          ],
+          "value": true
+        },
+        "role": "conclusion",
+        "section_id": "9",
+        "start_seconds": 52.78,
+        "text": "So the one thing, the only time I've seen him care was when I criticized him and he said I was cruel.",
+        "upstream_verification_status": "structural_hypothesis_unverified"
+      }
+    ],
+    "progression": {
+      "evidence_type": "unknown",
+      "reason": "reliable progression needs semantic inference",
+      "sources": [],
+      "value": null
+    },
+    "setup_context": {
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "method": "preserved_upstream_structural_hypothesis",
+      "sources": [
+        {
+          "end_seconds": 9.7,
+          "path": "$.semantic.sections",
+          "start_seconds": 3.52
+        }
+      ],
+      "value": {
+        "end_seconds": 9.7,
+        "role": "setup",
+        "start_seconds": 3.52,
+        "text": "Well, I gather You're not on his Christmas card list anymore Okay, so I agree with him on various things."
+      }
+    }
+  },
+  "storytelling": {
+    "chronology": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    },
+    "conflict": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    },
+    "goal": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    },
+    "narrative_perspective": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    },
+    "protagonist": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    },
+    "resolution": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    },
+    "stakes": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    },
+    "transformation": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    },
+    "turning_point": {
+      "evidence_type": "unknown",
+      "reason": "requires semantic inference or explicit source metadata",
+      "sources": [],
+      "value": null
+    }
+  }
+}
