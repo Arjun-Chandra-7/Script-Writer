@@ -36,6 +36,22 @@ def _sync_once(settings: Settings) -> dict[str, int]:
         registry.close()
 
 
+def _watch_cycle(settings: Settings) -> dict[str, object]:
+    registry = _registry(settings)
+    try:
+        source = GoogleDriveSource(settings.folder_id, settings.credentials_file)
+        summary = IngestionService(settings, registry, source).sync_once()
+        result: dict[str, object] = {"ingestion": asdict(summary)}
+        if settings.auto_propose_run:
+            try:
+                result["proposal"] = asdict(DatasetBuilder(settings, registry).propose_run())
+            except (DatasetNotReadyError, RuntimeError) as exc:
+                result["proposal"] = {"queued": False, "reason": str(exc)}
+        return result
+    finally:
+        registry.close()
+
+
 def _dry_run_sample(settings: Settings, sample: Path) -> dict[str, int]:
     body = sample.read_bytes()
     item = RemoteFile(
@@ -130,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
         signal.signal(signal.SIGINT, request_stop)
         while not stop:
             try:
-                print(json.dumps(_sync_once(settings), sort_keys=True), flush=True)
+                print(json.dumps(_watch_cycle(settings), sort_keys=True), flush=True)
             except Exception:
                 LOGGER.exception("Drive reconciliation failed; next scan will retry")
             if args.once:

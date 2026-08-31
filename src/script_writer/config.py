@@ -44,6 +44,7 @@ class Settings:
     max_new_examples: int = 500
     replay_ratio_percent: int = 25
     rights_attested: bool = False
+    auto_propose_run: bool = True
 
     @property
     def database_path(self) -> Path:
@@ -82,4 +83,5 @@ class Settings:
                 "SCRIPT_WRITER_REPLAY_RATIO_PERCENT", 25
             ),
             rights_attested=_boolean("SCRIPT_WRITER_RIGHTS_ATTESTED", False),
+            auto_propose_run=_boolean("SCRIPT_WRITER_AUTO_PROPOSE_RUN", True),
         )

@@ -20,6 +20,8 @@ extractor report are retained as context but never silently promoted to labels.
 
 Read [the architecture](docs/architecture.md) and
 [the research notes](docs/research.md) before enabling production ingestion.
+Deployment and recovery instructions are in the
+[operations guide](docs/operations.md).
 
 ## Planned operator flow
 
