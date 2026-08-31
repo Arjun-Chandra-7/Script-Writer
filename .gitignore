@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Runtime state and downloaded source material are never source-controlled.
+data/
+state/
+credentials/
+*.part
+
+# Model artifacts are promoted through the model registry, not Git.
+artifacts/
+checkpoints/
