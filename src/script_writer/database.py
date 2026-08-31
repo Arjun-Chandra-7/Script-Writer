@@ -657,3 +657,34 @@ class Registry:
             "failed": int(self.connection.execute("SELECT COUNT(*) FROM intelligence_compile_attempts WHERE status = 'failed'").fetchone()[0]),
             "pending": int(self.connection.execute("SELECT COUNT(*) FROM reports r LEFT JOIN intelligence_records ir ON ir.report_pk = r.id WHERE ir.id IS NULL").fetchone()[0]),
         }
+
+    def save_outcome(self, record: dict[str, object], canonical_json: str) -> bool:
+        rights = record["rights"]
+        normalization = record.get("cohort_normalization")
+        assert isinstance(rights, dict)
+        cohort_key = (
+            normalization.get("cohort_key")
+            if isinstance(normalization, dict)
+            else record.get("cohort_key")
+        )
+        before = self.connection.total_changes
+        self.connection.execute(
+            """
+            INSERT OR IGNORE INTO outcome_records(
+                report_id, schema_version, platform, account_context_id,
+                cohort_key, measured_at, payload_json, rights_allowed, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                record["report_id"],
+                record["schema_version"],
+                record["platform"],
+                record["account_context_id"],
+                cohort_key,
+                record["measured_at"],
+                canonical_json,
+                1 if rights["training_allowed"] else 0,
+                utc_now(),
+            ),
+        )
+        return self.connection.total_changes > before
