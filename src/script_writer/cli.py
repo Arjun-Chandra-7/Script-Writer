@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import signal
@@ -10,11 +11,17 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .config import Settings
+from .compiler_service import IntelligenceCompilationService
+from .corpus import CorpusIndex, SearchQuery
 from .database import Registry
 from .datasets import DatasetBuilder, DatasetNotReadyError
 from .domain import RemoteFile
 from .drive import GoogleDriveSource
+from .evaluation import OfflineEvaluator
+from .generation import DeterministicOutlineGenerator, GenerationRequest, RetrievalFirstScriptWriter
 from .ingestion import IngestionService, MemorySource
+from .intelligence import ScriptIntelligenceCompiler
+from .validation import parse_and_validate_report
 
 
 LOGGER = logging.getLogger(__name__)
@@ -41,12 +48,12 @@ def _watch_cycle(settings: Settings) -> dict[str, object]:
     try:
         source = GoogleDriveSource(settings.folder_id, settings.credentials_file)
         summary = IngestionService(settings, registry, source).sync_once()
-        result: dict[str, object] = {"ingestion": asdict(summary)}
-        if settings.auto_propose_run:
-            try:
-                result["proposal"] = asdict(DatasetBuilder(settings, registry).propose_run())
-            except (DatasetNotReadyError, RuntimeError) as exc:
-                result["proposal"] = {"queued": False, "reason": str(exc)}
+        index_result = CorpusIndex(registry).rebuild()
+        result: dict[str, object] = {
+            "ingestion": asdict(summary),
+            "intelligence": registry.intelligence_counts(),
+            "index": index_result,
+        }
         return result
     finally:
         registry.close()
@@ -81,8 +88,41 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("status", help="show ingestion and training queue state")
     commands.add_parser(
         "propose-run",
-        help="freeze eligible data and queue a run manifest; never executes training",
+        help="legacy inert training-manifest proposal; never executes training",
     )
+    compile_command = commands.add_parser(
+        "compile", help="compile pending admitted reports into ScriptIntelligenceRecords"
+    )
+    compile_command.add_argument("--limit", type=int, default=500)
+    compile_command.add_argument("--all", action="store_true")
+    compile_record = commands.add_parser(
+        "compile-record", help="compile one local extractor report to canonical JSON"
+    )
+    compile_record.add_argument("path", type=Path)
+    compile_record.add_argument("--output", type=Path)
+    index_command = commands.add_parser("index", help="build missing corpus embeddings")
+    index_command.add_argument("--force", action="store_true")
+    query_command = commands.add_parser("query", help="search compiled script intelligence")
+    query_command.add_argument("text", nargs="?", default="")
+    query_command.add_argument("--platform")
+    query_command.add_argument("--topic", action="append", default=[])
+    query_command.add_argument("--format", dest="content_formats", action="append", default=[])
+    query_command.add_argument("--hook", action="append", default=[])
+    query_command.add_argument("--retention", action="append", default=[])
+    query_command.add_argument("--max-duration", type=float)
+    query_command.add_argument("--top-k", type=int, default=10)
+    structural = commands.add_parser("structural-similar", help="find structurally similar scripts")
+    structural.add_argument("record_id")
+    structural.add_argument("--top-k", type=int, default=10)
+    draft = commands.add_parser(
+        "draft-baseline", help="run the deterministic retrieval-first contract demonstrator"
+    )
+    draft.add_argument("request", type=Path)
+    evaluate = commands.add_parser("evaluate", help="run deterministic offline evaluation")
+    evaluate.add_argument("request", type=Path)
+    evaluate.add_argument("result", type=Path)
+    evaluate.add_argument("--candidate-version", required=True)
+    evaluate.add_argument("--fixture-version", default="manual-v1")
     watch = commands.add_parser("watch", help="continuously reconcile the Drive folder")
     watch.add_argument("--once", action="store_true", help="run once and exit")
     dry_run = commands.add_parser(
@@ -110,7 +150,11 @@ def main(argv: list[str] | None = None) -> int:
         try:
             print(
                 json.dumps(
-                    {"counts": registry.counts(), "runs": registry.run_details()},
+                    {
+                        "counts": registry.counts(),
+                        "intelligence": registry.intelligence_counts(),
+                        "runs": registry.run_details(),
+                    },
                     sort_keys=True,
                 )
             )
@@ -131,6 +175,118 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "sync":
         print(json.dumps(_sync_once(settings), sort_keys=True))
+        return 0
+    if args.command == "compile":
+        registry = _registry(settings)
+        try:
+            service = IntelligenceCompilationService(
+                registry, ScriptIntelligenceCompiler(), settings.split_salt
+            )
+            total = {"examined": 0, "compiled": 0, "unchanged": 0, "failed": 0}
+            while True:
+                summary = asdict(service.compile_pending(limit=args.limit))
+                for key, value in summary.items():
+                    total[key] += value
+                if not args.all or summary["examined"] == 0 or summary["compiled"] == 0:
+                    break
+            print(json.dumps(total, sort_keys=True))
+        finally:
+            registry.close()
+        return 0
+    if args.command == "compile-record":
+        raw = args.path.read_bytes()
+        report, _ = parse_and_validate_report(raw, split_salt=settings.split_salt)
+        compiled = ScriptIntelligenceCompiler().compile(
+            report, artifact_sha256=hashlib.sha256(raw).hexdigest()
+        )
+        rendered = json.dumps(compiled.record, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(rendered)
+            print(
+                json.dumps(
+                    {"output": str(args.output), "record_sha256": compiled.sha256, "bytes": len(rendered.encode())},
+                    sort_keys=True,
+                )
+            )
+        else:
+            print(rendered, end="")
+        return 0
+    if args.command == "index":
+        registry = _registry(settings)
+        try:
+            print(json.dumps(CorpusIndex(registry).rebuild_all(force=args.force), sort_keys=True))
+        finally:
+            registry.close()
+        return 0
+    if args.command == "query":
+        registry = _registry(settings)
+        try:
+            index = CorpusIndex(registry)
+            index.rebuild_all()
+            hits = index.search(
+                SearchQuery(
+                    text=args.text,
+                    platform=args.platform,
+                    topics=tuple(args.topic),
+                    content_formats=tuple(args.content_formats),
+                    hook_mechanisms=tuple(args.hook),
+                    retention_devices=tuple(args.retention),
+                    max_duration_seconds=args.max_duration,
+                    top_k=args.top_k,
+                )
+            )
+            print(json.dumps([hit.summary() for hit in hits], indent=2, ensure_ascii=False))
+        finally:
+            registry.close()
+        return 0
+    if args.command == "structural-similar":
+        registry = _registry(settings)
+        try:
+            hits = CorpusIndex(registry).structurally_similar(args.record_id, top_k=args.top_k)
+            print(json.dumps([hit.summary() for hit in hits], indent=2, ensure_ascii=False))
+        finally:
+            registry.close()
+        return 0
+    if args.command == "draft-baseline":
+        registry = _registry(settings)
+        try:
+            request_data = json.loads(args.request.read_text())
+            request_data.pop("id", None)
+            request = GenerationRequest(**request_data)
+            index = CorpusIndex(registry)
+            index.rebuild_all()
+            result = RetrievalFirstScriptWriter(
+                index, DeterministicOutlineGenerator()
+            ).generate(request)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        finally:
+            registry.close()
+        return 0
+    if args.command == "evaluate":
+        registry = _registry(settings)
+        try:
+            request_data = json.loads(args.request.read_text())
+            request_data.pop("id", None)
+            result_data = json.loads(args.result.read_text())
+            source_records = []
+            index = CorpusIndex(registry)
+            for item in result_data.get("retrieved_evidence", []):
+                try:
+                    source_records.append(index.get_record(str(item["record_id"])))
+                except KeyError:
+                    pass
+            evaluation = OfflineEvaluator().evaluate(
+                request_data,
+                result_data,
+                source_records=source_records,
+                candidate_version=args.candidate_version,
+                fixture_set_version=args.fixture_version,
+            )
+            registry.save_evaluation(evaluation)
+            print(json.dumps(evaluation, indent=2, ensure_ascii=False))
+        finally:
+            registry.close()
         return 0
     if args.command == "dry-run-sample":
         print(json.dumps(_dry_run_sample(settings, args.path), sort_keys=True))
