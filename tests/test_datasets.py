@@ -93,6 +93,11 @@ class DatasetBuilderTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "active training run"):
             DatasetBuilder(config, registry).propose_run()
         self.assertEqual(registry.counts()["unreserved_train_reports"], 1)
+
+        registry.connection.execute("UPDATE training_runs SET state = 'failed'")
+        with self.assertRaisesRegex(RuntimeError, "active training run"):
+            DatasetBuilder(config, registry).propose_run()
+        self.assertEqual(registry.counts()["unreserved_train_reports"], 1)
         registry.close()
 
     def test_threshold_leaves_all_examples_unreserved(self) -> None:

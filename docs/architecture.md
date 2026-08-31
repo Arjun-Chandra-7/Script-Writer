@@ -152,6 +152,10 @@ training run. When 500 files arrive:
 7. a failed run can be retried or explicitly abandoned, releasing its
    reservation without losing the examples.
 
+Failed/resumable and evaluated-but-not-promoted runs count as unresolved. They
+block creation of a later run so adapter lineage cannot jump past a failure or
+an unreviewed candidate while newer files continue to ingest safely.
+
 This is at-least-once discovery with effectively-once dataset admission. It
 does not claim impossible exactly-once execution across GPU/process failure;
 instead it makes every repeated operation idempotent.

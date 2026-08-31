@@ -119,6 +119,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_active_training_run
 ON training_runs((1))
 WHERE state IN ('queued', 'preparing', 'running', 'evaluating');
 
+-- Failed runs retain their reservations for checkpoint resume; promotable runs
+-- retain theirs until the evaluated model is promoted or explicitly rejected.
+CREATE UNIQUE INDEX IF NOT EXISTS one_unresolved_training_run
+ON training_runs((1))
+WHERE state IN (
+    'queued', 'preparing', 'running', 'evaluating', 'promotable', 'failed'
+);
+
 CREATE TABLE IF NOT EXISTS example_reservations (
     report_pk INTEGER PRIMARY KEY,
     run_pk INTEGER NOT NULL,
@@ -325,7 +333,9 @@ class Registry:
             self.connection.execute(
                 """
                 SELECT COUNT(*) FROM training_runs
-                WHERE state IN ('queued', 'preparing', 'running', 'evaluating')
+                WHERE state IN (
+                    'queued', 'preparing', 'running', 'evaluating', 'promotable', 'failed'
+                )
                 """
             ).fetchone()[0]
         )
@@ -347,7 +357,9 @@ class Registry:
         row = self.connection.execute(
             """
             SELECT run_id FROM training_runs
-            WHERE state IN ('queued', 'preparing', 'running', 'evaluating')
+            WHERE state IN (
+                'queued', 'preparing', 'running', 'evaluating', 'promotable', 'failed'
+            )
             ORDER BY id DESC LIMIT 1
             """
         ).fetchone()
@@ -388,7 +400,9 @@ class Registry:
             active = connection.execute(
                 """
                 SELECT run_id FROM training_runs
-                WHERE state IN ('queued', 'preparing', 'running', 'evaluating')
+                WHERE state IN (
+                    'queued', 'preparing', 'running', 'evaluating', 'promotable', 'failed'
+                )
                 """
             ).fetchone()
             if active is not None:
