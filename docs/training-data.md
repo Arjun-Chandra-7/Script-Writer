@@ -118,6 +118,7 @@ The machine report cannot become `training_ready` unless all gates pass:
 - fixed-input regeneration is deterministic;
 - validation and test sets exist and their manifest membership is frozen;
 - configurable minimum eligible examples and human inspections are met.
+- semantic reconstruction has passed a human gold-set quality gate.
 
 The one-record committed demonstration correctly fails the last three practical
 corpus gates. Passing gates is necessary, not sufficient, for choosing a model.
@@ -139,3 +140,7 @@ Future work: human gold intent reconstruction, a validated semantic adapter,
 translated-copy detection, outcome-aware sampling interfaces, preference/ranking
 examples, provider-specific export adapters, and only then model selection and
 training experiments.
+
+Semantic reconstruction is now implemented as a candidate-enabling layer; its
+quality gate remains external to eligibility. See
+`docs/semantic-reconstruction.md`.

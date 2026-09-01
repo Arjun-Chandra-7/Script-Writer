@@ -63,6 +63,16 @@ This is the expected quality behavior. The next research requirement is a
 versioned semantic intent adapter evaluated against human-reconstructed minimum
 briefs—not a generic request to "write a viral script."
 
+## Semantic reconstruction baseline
+
+The rule baseline reconstructs the supplied sample as topic “DOGE government
+workforce cuts,” central idea “arbitrary workforce cuts harm public workers,”
+objective “persuade,” and format “commentary.” These are explicitly
+`model_inference` envelopes, not ground truth. It abstains on target audience,
+audience problem, and CTA. The fixture gold annotation accepts this output, but
+one fixture is not a human quality study; a 100–200-record stratified review is
+required before claiming calibrated reconstruction quality.
+
 The historical `.docx` remains unchanged for provenance.
 
 ## Retrieval choices

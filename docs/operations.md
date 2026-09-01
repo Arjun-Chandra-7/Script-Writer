@@ -155,6 +155,21 @@ must show no cross-split or target leakage, sufficient eligible examples,
 frozen validation/test membership, and sufficient human inspection before its
 status can become `training_ready`.
 
+## Semantic brief reconstruction
+
+```bash
+.venv/bin/script-writer semantic infer \
+  --intelligence examples/compiled/86c1671e8a3a7b46.script-intelligence.v1.json \
+  --client fixtures/client.example.json \
+  --cache /tmp/semantic-cache.sqlite3
+.venv/bin/script-writer semantic estimate-corpus --records 7500 --average-words 160
+```
+
+The local rule adapter is an inspectable baseline. The provider-neutral HTTP
+adapter is intentionally not selected by CLI and has no implicit network path.
+Use `dataset build --semantic-rules` only for a dry-run candidate audit; it does
+not prove semantic quality or open the training gate.
+
 ## Monitoring and recovery
 
 ```bash

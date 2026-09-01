@@ -18,6 +18,7 @@ from .dataset_design import (
 )
 from .text_analysis import normalize_transcript
 from .training_compiler import TrainingExampleCompiler
+from .training_intent import IntentReconstructor
 from .training_contracts import (
     TRAINING_COMPILER_VERSION,
     TRAINING_MANIFEST_VERSION,
@@ -62,10 +63,10 @@ class CorpusCompilation:
 
 
 class CorpusTrainingCompiler:
-    def __init__(self, *, split_salt: str, near_duplicate_distance: int = 3, cache: Any = None):
+    def __init__(self, *, split_salt: str, near_duplicate_distance: int = 3, cache: Any = None, reconstructor: IntentReconstructor | None = None):
         self.split_salt = split_salt
         self.guard = LeakageGuard(near_duplicate_distance)
-        self.example_compiler = TrainingExampleCompiler()
+        self.example_compiler = TrainingExampleCompiler(reconstructor)
         self.cache = cache
 
     def compile(
@@ -371,6 +372,7 @@ def training_readiness_report(
     minimum_reviewed_examples: int = 25,
     minimum_exported_examples: int = 100,
     deterministic_regeneration_verified: bool = False,
+    semantic_quality_gold_evaluated: bool = False,
 ) -> dict[str, Any]:
     examples = list(compilation.examples)
     selected = list(build["selected_examples"])
@@ -396,6 +398,7 @@ def training_readiness_report(
             any(item["identity"]["split"] == "validation" for item in selected)
             and any(item["identity"]["split"] == "test" for item in selected)
         ),
+        "semantic_reconstruction_gold_quality_verified": semantic_quality_gold_evaluated,
     }
     failed = sorted(name for name, passed in gates.items() if not passed)
     return {

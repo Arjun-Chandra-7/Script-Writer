@@ -12,6 +12,7 @@ from script_writer.semantic_reconstruction import (
     SemanticInferenceError, SemanticReconstructionService, estimate_corpus, field_leakage_report,
 )
 from script_writer.sharded_assembly import build_shards
+from script_writer.cli import main
 from script_writer.training_compiler import TrainingExampleCompiler
 from script_writer.training_contracts import ClientTrainingContext
 from script_writer.training_intent import SemanticIntentReconstructor
@@ -79,3 +80,21 @@ class SemanticReconstructionTests(unittest.TestCase):
             self.assertEqual(first["manifest_sha256"], second["manifest_sha256"])
             self.assertEqual(first["example_count"], 2501)
             self.assertEqual(len(first["shards"]), 3)
+
+    def test_cli_semantic_review_allows_unknown_without_forced_value(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "annotations.json"
+            self.assertEqual(main(["semantic", "review", "--record-id", REAL["record_id"], "--output", str(path), "--field", "target_audience", "--status", "unknown", "--reviewer", "reviewer-a"]), 0)
+            value = json.loads(path.read_text())
+            self.assertEqual(value[0]["fields"]["target_audience"]["status"], "unknown")
+
+    def test_cli_infer_persists_review_artifact_and_error_analysis(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            intelligence = root / "record.json"
+            intelligence.write_text(json.dumps(REAL))
+            artifact = root / "brief.json"
+            self.assertEqual(main(["semantic", "infer", "--intelligence", str(intelligence), "--client", str(ROOT / "fixtures/client.example.json"), "--output", str(artifact)]), 0)
+            annotation = root / "annotations.json"
+            annotation.write_text(json.dumps([{"record_id": REAL["record_id"], "reviewer_id": "fixture-a", "fields": {"topic": {"status": "value", "acceptable_values": ["DOGE government workforce cuts"]}}}]))
+            self.assertEqual(main(["semantic", "error-analysis", "--briefs", str(artifact), "--annotations", str(annotation)]), 0)

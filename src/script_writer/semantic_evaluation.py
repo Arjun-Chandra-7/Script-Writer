@@ -38,7 +38,8 @@ def evaluate_gold(briefs: dict[str, dict[str, Any]], annotations: list[dict[str,
     for field, counts in by_field.items():
         total = sum(counts.values())
         result[field] = {**counts, "total": total, "accept_rate": round(counts["accepted"] / total, 4) if total else None, "false_inference_rate": round(counts["false_inference"] / total, 4) if total else None, "correct_abstention_rate": round(counts["correct_abstention"] / total, 4) if total else None}
-    return {"fields": result, "error_count": len(errors), "errors": errors, "human_acceptance_available": bool(annotations)}
+    human_annotations = [item for item in annotations if not str(item.get("reviewer_id", "")).startswith("fixture-")]
+    return {"fields": result, "error_count": len(errors), "errors": errors, "human_acceptance_available": bool(human_annotations), "fixture_annotation_count": len(annotations) - len(human_annotations)}
 
 
 def reviewer_agreement(annotations: list[dict[str, Any]], field: str) -> dict[str, Any]:

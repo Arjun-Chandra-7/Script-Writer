@@ -148,6 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
     dataset_build.add_argument("--source-cap", type=int)
     dataset_build.add_argument("--minimum-reviews", type=int, default=25)
     dataset_build.add_argument("--minimum-examples", type=int, default=100)
+    dataset_build.add_argument("--semantic-rules", action="store_true", help="use the conservative local semantic intent adapter")
     dataset_show = dataset_commands.add_parser("show", help="show one compact review view")
     dataset_show.add_argument("directory", type=Path)
     dataset_show.add_argument("example_id")
@@ -168,14 +169,26 @@ def build_parser() -> argparse.ArgumentParser:
     semantic_infer.add_argument("--intelligence", type=Path, required=True)
     semantic_infer.add_argument("--client", type=Path, required=True)
     semantic_infer.add_argument("--cache", type=Path)
+    semantic_infer.add_argument("--output", type=Path, help="optionally persist the compact review artifact")
     semantic_evaluate = semantic_commands.add_parser("evaluate", help="evaluate briefs against human gold annotations")
     semantic_evaluate.add_argument("--briefs", type=Path, required=True)
     semantic_evaluate.add_argument("--annotations", type=Path, required=True)
+    semantic_errors = semantic_commands.add_parser("error-analysis", help="show semantic reconstruction failures from gold annotations")
+    semantic_errors.add_argument("--briefs", type=Path, required=True)
+    semantic_errors.add_argument("--annotations", type=Path, required=True)
     semantic_estimate = semantic_commands.add_parser("estimate-corpus", help="estimate semantic inference scale without requests")
     semantic_estimate.add_argument("--records", type=int, required=True)
     semantic_estimate.add_argument("--average-words", type=int, default=160)
     semantic_estimate.add_argument("--input-price-per-million", type=float, default=0.0)
     semantic_estimate.add_argument("--output-price-per-million", type=float, default=0.0)
+    semantic_review = semantic_commands.add_parser("review", help="append one human semantic annotation")
+    semantic_review.add_argument("--record-id", required=True)
+    semantic_review.add_argument("--output", type=Path, required=True)
+    semantic_review.add_argument("--field", required=True)
+    semantic_review.add_argument("--status", choices=("value", "unknown", "ambiguous", "not_inferable"), required=True)
+    semantic_review.add_argument("--value", action="append", default=[])
+    semantic_review.add_argument("--reviewer", required=True)
+    semantic_review.add_argument("--note", default="")
     return parser
 
 
@@ -351,6 +364,7 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 minimum_reviewed_examples=args.minimum_reviews,
                 minimum_exported_examples=args.minimum_examples,
+                semantic_rules=args.semantic_rules,
             )
             print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
             return 0
@@ -371,9 +385,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.dataset_command == "shard":
             def examples() -> object:
-                for line in args.input.read_text().splitlines():
-                    if line.strip():
-                        yield json.loads(line)
+                with args.input.open() as handle:
+                    for line in handle:
+                        if line.strip():
+                            yield json.loads(line)
             print(json.dumps(build_shards(examples(), args.output, shard_size=args.size), indent=2, sort_keys=True))
             return 0
     if args.command == "semantic":
@@ -384,7 +399,11 @@ def main(argv: list[str] | None = None) -> int:
                 client = ClientTrainingContext.from_path(args.client).projection
                 brief = SemanticReconstructionService(RuleBasedSemanticIntentAdapter(), cache).reconstruct(record, client)
                 target = str(record["content"]["clean_transcript"]["value"])
-                print(json.dumps({"record_id": record["record_id"], "brief": brief, "field_leakage": field_leakage_report(brief, target)}, indent=2, ensure_ascii=False))
+                artifact = {"record_id": record["record_id"], "brief": brief, "field_leakage": field_leakage_report(brief, target)}
+                if args.output:
+                    args.output.parent.mkdir(parents=True, exist_ok=True)
+                    args.output.write_text(json.dumps(artifact, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
+                print(json.dumps(artifact, indent=2, ensure_ascii=False))
             finally:
                 if cache: cache.close()
             return 0
@@ -398,8 +417,32 @@ def main(argv: list[str] | None = None) -> int:
             annotations = json.loads(args.annotations.read_text())
             print(json.dumps(evaluate_gold(briefs, annotations), indent=2, ensure_ascii=False))
             return 0
+        if args.semantic_command == "error-analysis":
+            raw = json.loads(args.briefs.read_text())
+            values = raw if isinstance(raw, list) else raw.get("briefs", [raw])
+            briefs = {
+                item["record_id"]: item.get("brief", item)
+                for item in values if isinstance(item, dict) and "record_id" in item
+            }
+            report = evaluate_gold(briefs, json.loads(args.annotations.read_text()))
+            print(json.dumps({"error_count": report["error_count"], "errors": report["errors"]}, indent=2, ensure_ascii=False))
+            return 0
         if args.semantic_command == "estimate-corpus":
             print(json.dumps(estimate_corpus(args.records, args.average_words, adapter=RuleBasedSemanticIntentAdapter(), input_price_per_million=args.input_price_per_million, output_price_per_million=args.output_price_per_million), indent=2, sort_keys=True))
+            return 0
+        if args.semantic_command == "review":
+            annotations = json.loads(args.output.read_text()) if args.output.exists() else []
+            if not isinstance(annotations, list): raise ValueError("annotation file must be an array")
+            item = next((value for value in annotations if value.get("record_id") == args.record_id and value.get("reviewer_id") == args.reviewer), None)
+            if item is None:
+                item = {"record_id": args.record_id, "reviewer_id": args.reviewer, "fields": {}}
+                annotations.append(item)
+            field = {"status": args.status, "note": args.note}
+            if args.status == "value": field["acceptable_values"] = args.value
+            item["fields"][args.field] = field
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(annotations, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
+            print(json.dumps({"record_id": args.record_id, "field": args.field, "status": args.status}))
             return 0
     if args.command == "watch":
         stop = False

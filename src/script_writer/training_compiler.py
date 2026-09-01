@@ -153,8 +153,8 @@ class TrainingExampleCompiler:
                         "duration_seconds": evidence_value(intelligence["content"].get("video_duration_seconds")),
                         "word_count": evidence_value(intelligence["content"].get("spoken_word_count")),
                         "words_per_second": evidence_value(intelligence["content"].get("words_per_second")),
-                        "topic": evidence_value(intelligence["content"].get("topic")),
-                        "content_format": evidence_value(intelligence["content"].get("content_format")),
+                        "topic": evidence_value(brief.get("topic")),
+                        "content_format": evidence_value(brief.get("content_format")),
                     },
                 },
                 "client_context_ref": {

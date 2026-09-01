@@ -66,6 +66,8 @@ Implemented capabilities:
   source splits, immutable JSONL manifests, and explicit rejection files;
 - incremental per-record compilation cache, corpus audit, readiness gates, and
   compact CLI review workflow.
+- staged semantic intent reconstruction with fail-closed adapters, field-level
+  leakage/compression checks, gold-set evaluation helpers, and shard export.
 
 ## What does not exist yet
 
@@ -132,4 +134,5 @@ one continuation example is exported. See the committed
 
 See [architecture](docs/architecture.md), [operations](docs/operations.md),
 [training-data pipeline](docs/training-data.md), [research](docs/research.md),
-and the machine-readable [schemas](schemas/).
+[semantic reconstruction](docs/semantic-reconstruction.md), and the
+machine-readable [schemas](schemas/).

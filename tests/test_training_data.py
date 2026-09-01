@@ -31,6 +31,8 @@ from script_writer.training_dataset import (
 from script_writer.training_leakage import leakage_metrics
 from script_writer.training_cache import TrainingCompilationCache
 from script_writer.training_workflow import build_training_artifacts
+from script_writer.training_intent import SemanticIntentReconstructor
+from script_writer.semantic_reconstruction import RuleBasedSemanticIntentAdapter, SemanticReconstructionService
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -261,6 +263,13 @@ class TrainingDataTests(unittest.TestCase):
         second = compiler.compile([REAL], context().projection)
         self.assertEqual(first.examples, second.examples)
         self.assertEqual(first.rejections, second.rejections)
+
+    def test_semantic_reconstructor_changes_eligibility_without_overriding_audience(self) -> None:
+        reconstructor = SemanticIntentReconstructor(SemanticReconstructionService(RuleBasedSemanticIntentAdapter()))
+        result = CorpusTrainingCompiler(split_salt="tests", reconstructor=reconstructor).compile([REAL], context().projection)
+        full = next(x for x in result.examples if x["identity"]["dataset_objective"] == TrainingObjective.FULL_SCRIPT.value)
+        self.assertNotEqual(full["quality"]["eligibility"], "ineligible")
+        self.assertEqual(full["training_input"]["content_brief"]["audience"]["evidence_type"], "unknown")
 
     def test_incremental_cache_avoids_recompiling_unchanged_record(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -107,19 +107,27 @@ class RuleBasedSemanticIntentAdapter:
 
     def infer(self, request: dict[str, Any]) -> dict[str, Any]:
         text = request["transcript"].lower()
+        stage = request["stage"]
         result: dict[str, Any] = {}
         def item(value: Any, confidence: float) -> dict[str, Any]:
             return {"value": value, "confidence": confidence, "evidence_paths": ["$.content.clean_transcript"]}
         if "doge" in text and "government workers" in text:
-            result.update({
-                "topic": item("DOGE government workforce cuts", 0.72),
-                "central_idea": item("The speaker argues that arbitrary workforce cuts harm public workers.", 0.68),
-                "content_objective": item("persuade", 0.63),
-                "content_format": item("commentary", 0.78),
-                "required_concepts": item(["DOGE", "government workers", "consequences"], 0.75),
-                "hook_intent": item("open a critical discussion through a question", 0.58),
-            })
-        elif "how to" in text or "step" in text:
+            if stage == "topic_central_idea":
+                result.update({
+                    "topic": item("DOGE government workforce cuts", 0.72),
+                    "central_idea": item("The speaker argues that arbitrary workforce cuts harm public workers.", 0.68),
+                })
+            elif stage == "objective_format":
+                result.update({
+                    "content_objective": item("persuade", 0.63),
+                    "content_format": item("commentary", 0.78),
+                })
+            elif stage == "conditional_context":
+                result.update({
+                    "required_concepts": item(["DOGE", "government workers", "consequences"], 0.75),
+                    "hook_intent": item("open a critical discussion through a question", 0.58),
+                })
+        elif stage == "objective_format" and ("how to" in text or "step" in text):
             result.update({"content_objective": item("educate", 0.62), "content_format": item("tutorial", 0.62)})
         return result
 

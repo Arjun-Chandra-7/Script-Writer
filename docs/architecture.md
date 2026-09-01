@@ -268,3 +268,5 @@ training-data builds at the top of the target range.
 - any training, fine-tuning, checkpoint, or promotion workflow.
 
 The authoritative training-data design is in `docs/training-data.md`.
+Semantic adapter design and current validation limits are in
+`docs/semantic-reconstruction.md`.

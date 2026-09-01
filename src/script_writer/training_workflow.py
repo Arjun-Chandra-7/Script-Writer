@@ -8,6 +8,8 @@ from typing import Any
 
 from .training_contracts import ClientTrainingContext, canonical_json, evidence_value
 from .training_cache import TrainingCompilationCache
+from .training_intent import SemanticIntentReconstructor
+from .semantic_reconstruction import RuleBasedSemanticIntentAdapter, SemanticInferenceCache, SemanticReconstructionService
 from .training_dataset import (
     CorpusCompilation,
     CorpusTrainingCompiler,
@@ -36,6 +38,7 @@ def build_training_artifacts(
     sampling_policy: SamplingPolicy = SamplingPolicy(),
     minimum_reviewed_examples: int = 25,
     minimum_exported_examples: int = 100,
+    semantic_rules: bool = False,
 ) -> dict[str, Any]:
     if not intelligence_paths:
         raise ValueError("at least one ScriptIntelligenceRecord is required")
@@ -43,10 +46,13 @@ def build_training_artifacts(
     client = ClientTrainingContext.from_path(client_path)
     decisions = ReviewStore(output_dir / "reviews.json").decisions()
     cache = TrainingCompilationCache(output_dir / ".training-cache" / "compilations.sqlite3")
-    compiler = CorpusTrainingCompiler(split_salt=split_salt, cache=cache)
+    semantic_cache = SemanticInferenceCache(output_dir / ".training-cache" / "semantic.sqlite3") if semantic_rules else None
+    reconstructor = SemanticIntentReconstructor(SemanticReconstructionService(RuleBasedSemanticIntentAdapter(), semantic_cache)) if semantic_rules else None
+    compiler = CorpusTrainingCompiler(split_salt=split_salt, cache=cache, reconstructor=reconstructor)
     first = compiler.compile(records, client.projection)
     second = compiler.compile(records, client.projection)
     cache.close()
+    if semantic_cache: semantic_cache.close()
     deterministic = (
         first.examples == second.examples
         and first.rejections == second.rejections
@@ -85,6 +91,7 @@ def build_training_artifacts(
         minimum_reviewed_examples=minimum_reviewed_examples,
         minimum_exported_examples=minimum_exported_examples,
         deterministic_regeneration_verified=deterministic,
+        semantic_quality_gold_evaluated=False,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     client_bytes = (json.dumps(client.projection, indent=2, ensure_ascii=False, sort_keys=True) + "\n").encode()
