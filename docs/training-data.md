@@ -126,10 +126,14 @@ corpus gates. Passing gates is necessary, not sufficient, for choosing a model.
 
 The large extractor report is parsed upstream once. Training compilation reads
 compact `ScriptIntelligenceRecord` files, caches per-record transforms, stores
-immutable outputs, and can resume after interruption. Near-duplicate identity
-state is compact. Current CLI input expansion and manifest assembly are suitable
-for the intended 5,000–50,000 single-client range, not millions. Multi-host
-concurrent builds would require a server database and distributed snapshot lock.
+immutable outputs, and can resume unchanged transforms after interruption.
+Near-duplicate identity state is compact. The current CLI still materializes the
+fixed snapshot's compact records and candidate examples while assembling
+manifests. That is verified for the supplied sample but is not yet a proven
+bounded-memory 50,000-source build. Disk-backed staging/sharded export and a
+7,500-source benchmark are required before a production corpus run. Multi-host
+concurrent builds would additionally require a server database and distributed
+snapshot lock.
 
 Future work: human gold intent reconstruction, a validated semantic adapter,
 translated-copy detection, outcome-aware sampling interfaces, preference/ranking

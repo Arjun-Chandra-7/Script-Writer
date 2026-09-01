@@ -252,6 +252,11 @@ For 5,000–50,000 reports:
 SQLite remains appropriate for one local writer/service at this scale. Multiple
 concurrent writer hosts would require a transactional server database.
 
+The intelligence/index path is batch-bounded. Training manifest assembly still
+materializes a fixed compact snapshot in one process; disk-backed staging and a
+full 7,500-source benchmark remain required before claiming bounded-memory
+training-data builds at the top of the target range.
+
 ## Planned, not implemented
 
 - learned semantic analyzer and production embeddings;
