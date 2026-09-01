@@ -1,0 +1,15 @@
+[
+  {
+    "record_id": "sir:277de2b59f2be8f88047b631ed1e5de4:1.0.0",
+    "reviewer_id": "fixture-reviewer-a",
+    "fields": {
+      "topic": {"status": "value", "acceptable_values": ["DOGE government workforce cuts", "government workforce cuts"]},
+      "central_idea": {"status": "value", "acceptable_values": ["The speaker argues that arbitrary workforce cuts harm public workers."]},
+      "content_objective": {"status": "value", "acceptable_values": ["persuade", "commentary"]},
+      "content_format": {"status": "value", "acceptable_values": ["commentary", "opinion"]},
+      "target_audience": {"status": "not_inferable"},
+      "audience_problem_desire": {"status": "not_inferable"},
+      "cta_intent": {"status": "not_inferable"}
+    }
+  }
+]

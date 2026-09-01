@@ -23,6 +23,13 @@ from .ingestion import IngestionService, MemorySource
 from .intelligence import ScriptIntelligenceCompiler
 from .training_dataset import ReviewStore, SamplingPolicy
 from .training_workflow import build_training_artifacts, inspect_example
+from .semantic_reconstruction import (
+    RuleBasedSemanticIntentAdapter, SemanticInferenceCache, SemanticReconstructionService,
+    estimate_corpus, field_leakage_report,
+)
+from .semantic_evaluation import evaluate_gold
+from .sharded_assembly import build_shards
+from .training_contracts import ClientTrainingContext
 from .validation import parse_and_validate_report
 
 
@@ -151,6 +158,24 @@ def build_parser() -> argparse.ArgumentParser:
     dataset_review.add_argument("--note", default="")
     dataset_audit_command = dataset_commands.add_parser("audit", help="show the latest immutable dataset audit")
     dataset_audit_command.add_argument("directory", type=Path)
+    shard = dataset_commands.add_parser("shard", help="stream a compiled example JSONL into immutable shards")
+    shard.add_argument("input", type=Path)
+    shard.add_argument("--output", type=Path, required=True)
+    shard.add_argument("--size", type=int, default=1000)
+    semantic = commands.add_parser("semantic", help="semantic intent reconstruction workflows")
+    semantic_commands = semantic.add_subparsers(dest="semantic_command", required=True)
+    semantic_infer = semantic_commands.add_parser("infer", help="reconstruct one MinimumSufficientTrainingBrief")
+    semantic_infer.add_argument("--intelligence", type=Path, required=True)
+    semantic_infer.add_argument("--client", type=Path, required=True)
+    semantic_infer.add_argument("--cache", type=Path)
+    semantic_evaluate = semantic_commands.add_parser("evaluate", help="evaluate briefs against human gold annotations")
+    semantic_evaluate.add_argument("--briefs", type=Path, required=True)
+    semantic_evaluate.add_argument("--annotations", type=Path, required=True)
+    semantic_estimate = semantic_commands.add_parser("estimate-corpus", help="estimate semantic inference scale without requests")
+    semantic_estimate.add_argument("--records", type=int, required=True)
+    semantic_estimate.add_argument("--average-words", type=int, default=160)
+    semantic_estimate.add_argument("--input-price-per-million", type=float, default=0.0)
+    semantic_estimate.add_argument("--output-price-per-million", type=float, default=0.0)
     return parser
 
 
@@ -343,6 +368,38 @@ def main(argv: list[str] | None = None) -> int:
             if not paths:
                 raise FileNotFoundError("no dataset audit found")
             print(paths[0].read_text(), end="")
+            return 0
+        if args.dataset_command == "shard":
+            def examples() -> object:
+                for line in args.input.read_text().splitlines():
+                    if line.strip():
+                        yield json.loads(line)
+            print(json.dumps(build_shards(examples(), args.output, shard_size=args.size), indent=2, sort_keys=True))
+            return 0
+    if args.command == "semantic":
+        if args.semantic_command == "infer":
+            cache = SemanticInferenceCache(args.cache) if args.cache else None
+            try:
+                record = json.loads(args.intelligence.read_text())
+                client = ClientTrainingContext.from_path(args.client).projection
+                brief = SemanticReconstructionService(RuleBasedSemanticIntentAdapter(), cache).reconstruct(record, client)
+                target = str(record["content"]["clean_transcript"]["value"])
+                print(json.dumps({"record_id": record["record_id"], "brief": brief, "field_leakage": field_leakage_report(brief, target)}, indent=2, ensure_ascii=False))
+            finally:
+                if cache: cache.close()
+            return 0
+        if args.semantic_command == "evaluate":
+            raw = json.loads(args.briefs.read_text())
+            values = raw if isinstance(raw, list) else raw.get("briefs", [raw])
+            briefs = {
+                item["record_id"]: item.get("brief", item)
+                for item in values if isinstance(item, dict) and "record_id" in item
+            }
+            annotations = json.loads(args.annotations.read_text())
+            print(json.dumps(evaluate_gold(briefs, annotations), indent=2, ensure_ascii=False))
+            return 0
+        if args.semantic_command == "estimate-corpus":
+            print(json.dumps(estimate_corpus(args.records, args.average_words, adapter=RuleBasedSemanticIntentAdapter(), input_price_per_million=args.input_price_per_million, output_price_per_million=args.output_price_per_million), indent=2, sort_keys=True))
             return 0
     if args.command == "watch":
         stop = False

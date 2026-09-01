@@ -6,6 +6,7 @@ from typing import Any, Protocol
 
 from .contracts import SourceRef, derived, heuristic, unknown
 from .training_contracts import evidence_value, known_evidence
+from .semantic_reconstruction import SemanticReconstructionService
 
 
 INTENT_RECONSTRUCTOR_VERSION = "minimum-conditioning-rules-v1"
@@ -117,3 +118,27 @@ class MinimumConditioningReconstructor:
             "cta_mechanism": intelligence["persuasion"].get("cta_mechanism", unknown("CTA unavailable")),
         }
         return brief, plan
+
+
+@dataclass
+class SemanticIntentReconstructor:
+    """Adapter-backed reconstruction, preserving the training compiler contract."""
+    service: SemanticReconstructionService
+
+    @property
+    def version(self) -> str:
+        return f"{self.service.adapter.version}:{self.service.adapter.prompt_version}"
+
+    def reconstruct(self, intelligence: dict[str, Any], client_context: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        semantic = self.service.reconstruct(intelligence, client_context)
+        base, plan = MinimumConditioningReconstructor().reconstruct(intelligence, client_context)
+        base.update({
+            "topic": semantic["topic"], "central_idea": semantic["central_idea"],
+            "content_objective": semantic["content_objective"], "content_format": semantic["content_format"],
+            "audience": semantic["target_audience"], "audience_problem_desire": semantic["audience_problem_desire"],
+            "desired_outcome": semantic["desired_outcome"], "tone": semantic["tone"],
+            "required_concepts": semantic["required_concepts"], "prohibited_concepts": semantic["prohibited_concepts"],
+            "factual_context": semantic["factual_context"], "stylistic_constraints": semantic["stylistic_constraints"],
+        })
+        plan.update({"hook_intent": semantic["hook_intent"], "progression": semantic["progression"], "cta_mechanism": semantic["cta_intent"]})
+        return base, plan
