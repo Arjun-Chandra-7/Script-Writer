@@ -9,6 +9,7 @@ import sys
 import time
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 from .config import Settings
 from .compiler_service import IntelligenceCompilationService
@@ -28,6 +29,10 @@ from .semantic_reconstruction import (
     estimate_corpus, field_leakage_report,
 )
 from .semantic_evaluation import evaluate_gold
+from .gold_validation import (
+    adjudicate, benchmark_adapter, contamination_test, freeze_gold_set, full_corpus_projection, new_annotation,
+    pilot, review_payload, run_ablation, semantic_quality_gate_report, stratified_gold_sample, verified_quality_report,
+)
 from .sharded_assembly import build_shards
 from .training_contracts import ClientTrainingContext
 from .validation import parse_and_validate_report
@@ -86,6 +91,11 @@ def _dry_run_sample(settings: Settings, sample: Path) -> dict[str, int]:
         return asdict(summary)
     finally:
         registry.close()
+
+
+def _write_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -149,6 +159,8 @@ def build_parser() -> argparse.ArgumentParser:
     dataset_build.add_argument("--minimum-reviews", type=int, default=25)
     dataset_build.add_argument("--minimum-examples", type=int, default=100)
     dataset_build.add_argument("--semantic-rules", action="store_true", help="use the conservative local semantic intent adapter")
+    dataset_build.add_argument("--gold-manifest", type=Path, help="frozen evaluation-only sources to exclude from training")
+    dataset_build.add_argument("--semantic-quality-report", type=Path, help="frozen quality-gate report; only a passing report can satisfy that readiness gate")
     dataset_show = dataset_commands.add_parser("show", help="show one compact review view")
     dataset_show.add_argument("directory", type=Path)
     dataset_show.add_argument("example_id")
@@ -189,6 +201,92 @@ def build_parser() -> argparse.ArgumentParser:
     semantic_review.add_argument("--value", action="append", default=[])
     semantic_review.add_argument("--reviewer", required=True)
     semantic_review.add_argument("--note", default="")
+    gold = commands.add_parser("gold", help="human semantic-quality validation workflows")
+    gold_commands = gold.add_subparsers(dest="gold_command", required=True)
+    gold_sample = gold_commands.add_parser("sample", help="create a deterministic stratified evaluation-only selection")
+    gold_sample.add_argument("--intelligence", type=Path, action="append", required=True)
+    gold_sample.add_argument("--output", type=Path, required=True)
+    gold_sample.add_argument("--count", type=int, default=150)
+    gold_sample.add_argument("--seed", default="gold-v1")
+    gold_review = gold_commands.add_parser("review", help="emit a blind or assisted compact review artifact")
+    gold_review.add_argument("--intelligence", type=Path, required=True)
+    gold_review.add_argument("--client", type=Path, required=True)
+    gold_review.add_argument("--mode", choices=("blind", "assisted"), required=True)
+    gold_review.add_argument("--output", type=Path, required=True)
+    gold_annotate = gold_commands.add_parser("annotate", help="append one reviewer field annotation")
+    gold_annotate.add_argument("--record-id", required=True)
+    gold_annotate.add_argument("--reviewer", required=True)
+    gold_annotate.add_argument("--mode", choices=("blind", "assisted"), required=True)
+    gold_annotate.add_argument("--field", required=True)
+    gold_annotate.add_argument(
+        "--status",
+        choices=(
+            "value", "accepted", "partial", "wrong",
+            "too_broad", "too_narrow", "too_vague", "too_detailed",
+            "leakage", "unknown", "ambiguous", "not_inferable", "reject"
+        ),
+        required=True,
+    )
+    gold_annotate.add_argument("--value", action="append", default=[])
+    gold_annotate.add_argument("--proposed-value")
+    gold_annotate.add_argument("--confidence", type=float)
+    gold_annotate.add_argument("--inferability")
+    gold_annotate.add_argument("--ambiguity")
+    gold_annotate.add_argument("--alternatives", action="append", default=[])
+    gold_annotate.add_argument("--notes", "--note", dest="notes", default="")
+    gold_annotate.add_argument("--output", type=Path, required=True)
+    gold_adjudicate = gold_commands.add_parser("adjudicate", help="append a resolved field without deleting reviewer disagreement")
+    gold_adjudicate.add_argument("--annotations", type=Path, required=True)
+    gold_adjudicate.add_argument("--record-id", required=True)
+    gold_adjudicate.add_argument("--field", required=True)
+    gold_adjudicate.add_argument("--resolver", required=True)
+    gold_adjudicate.add_argument(
+        "--status",
+        choices=(
+            "value", "accepted", "partial", "wrong",
+            "too_broad", "too_narrow", "too_vague", "too_detailed",
+            "leakage", "unknown", "ambiguous", "not_inferable", "reject"
+        ),
+        required=True,
+    )
+    gold_adjudicate.add_argument("--value", action="append", default=[])
+    gold_adjudicate.add_argument("--notes", "--note", dest="notes", default="")
+    gold_adjudicate.add_argument("--output", type=Path, required=True)
+    gold_freeze = gold_commands.add_parser("freeze", help="create immutable evaluation-only gold manifest")
+    gold_freeze.add_argument("--selection", type=Path, required=True)
+    gold_freeze.add_argument("--annotations", type=Path, required=True)
+    gold_freeze.add_argument("--adjudications", type=Path, required=True)
+    gold_freeze.add_argument("--output", type=Path, required=True)
+    gold_benchmark = gold_commands.add_parser("benchmark", help="compare local single-pass and staged semantic configurations")
+    gold_benchmark.add_argument("--intelligence", type=Path, action="append", required=True)
+    gold_benchmark.add_argument("--client", type=Path, required=True)
+    gold_benchmark.add_argument("--annotations", type=Path, default=None)
+    gold_benchmark.add_argument("--output", type=Path, required=True)
+    gold_ablation = gold_commands.add_parser("ablation", help="compare canonical semantic input variants")
+    gold_ablation.add_argument("--intelligence", type=Path, action="append", required=True)
+    gold_ablation.add_argument("--client", type=Path, required=True)
+    gold_ablation.add_argument("--annotations", type=Path, default=None)
+    gold_ablation.add_argument("--output", type=Path, required=True)
+    gold_contaminate = gold_commands.add_parser("contamination-test", help="verify irrelevant client contexts do not rewrite source meaning")
+    gold_contaminate.add_argument("--intelligence", type=Path, required=True)
+    gold_contaminate.add_argument("--clients", type=Path, action="append", required=True)
+    gold_contaminate.add_argument("--output", type=Path, required=True)
+    gold_pilot = gold_commands.add_parser("pilot", help="run a bounded local semantic corpus pilot")
+    gold_pilot.add_argument("--intelligence", type=Path, action="append", required=True)
+    gold_pilot.add_argument("--client", type=Path, required=True)
+    gold_pilot.add_argument("--limit", type=int, default=500)
+    gold_pilot.add_argument("--output", type=Path, required=True)
+    gold_report = gold_commands.add_parser("report", help="apply frozen semantic quality gates to a benchmark artifact")
+    gold_report.add_argument("--benchmark", type=Path, required=True)
+    gold_report.add_argument("--reviewed-sources", type=int, required=True)
+    gold_report.add_argument("--gates", type=Path, required=True)
+    gold_report.add_argument("--output", type=Path, required=True)
+    gold_estimate = gold_commands.add_parser("estimate", help="project full-corpus semantic cost/runtime from a measured pilot")
+    gold_estimate.add_argument("--pilot", type=Path, required=True)
+    gold_estimate.add_argument("--sources", type=int, required=True)
+    gold_estimate.add_argument("--input-price-per-million", type=float, default=0.0)
+    gold_estimate.add_argument("--output-price-per-million", type=float, default=0.0)
+    gold_estimate.add_argument("--output", type=Path, required=True)
     return parser
 
 
@@ -365,6 +463,8 @@ def main(argv: list[str] | None = None) -> int:
                 minimum_reviewed_examples=args.minimum_reviews,
                 minimum_exported_examples=args.minimum_examples,
                 semantic_rules=args.semantic_rules,
+                gold_manifest=json.loads(args.gold_manifest.read_text()) if args.gold_manifest else None,
+                semantic_quality_gold_evaluated=verified_quality_report(json.loads(args.semantic_quality_report.read_text())) if args.semantic_quality_report else False,
             )
             print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
             return 0
@@ -443,6 +543,97 @@ def main(argv: list[str] | None = None) -> int:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(annotations, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
             print(json.dumps({"record_id": args.record_id, "field": args.field, "status": args.status}))
+            return 0
+    if args.command == "gold":
+        if args.gold_command == "estimate":
+            result = full_corpus_projection(json.loads(args.pilot.read_text()), args.sources, input_price_per_million=args.input_price_per_million, output_price_per_million=args.output_price_per_million)
+            _write_json(args.output, result)
+            print(json.dumps({"sources": args.sources, "pricing_configured": result["pricing_configured"], "expected": result["expected"]}, sort_keys=True))
+            return 0
+        if args.gold_command == "report":
+            benchmark = json.loads(args.benchmark.read_text())
+            # A comparison artifact contains the staged result; direct benchmark artifacts are also accepted.
+            candidate = benchmark.get("staged", benchmark)
+            result = semantic_quality_gate_report(candidate, reviewed_sources=args.reviewed_sources, config=json.loads(args.gates.read_text()))
+            _write_json(args.output, result)
+            print(json.dumps({"semantic_reconstruction_gold_quality_verified": result["semantic_reconstruction_gold_quality_verified"], "failed_gates": result["failed_gates"]}, sort_keys=True))
+            return 0
+        if args.gold_command == "sample":
+            selection = stratified_gold_sample([json.loads(path.read_text()) for path in args.intelligence], args.count, seed=args.seed)
+            _write_json(args.output, selection)
+            print(json.dumps({"selection_id": selection["selection_id"], "available_records": selection["available_records"], "sampled_records": len(selection["entries"]), "evaluation_only": True}, sort_keys=True))
+            return 0
+        if args.gold_command == "review":
+            record = json.loads(args.intelligence.read_text())
+            client = ClientTrainingContext.from_path(args.client).projection
+            proposal = None
+            if args.mode == "assisted": proposal = SemanticReconstructionService(RuleBasedSemanticIntentAdapter()).reconstruct(record, client)
+            payload = review_payload(record, mode=args.mode, client=client, proposal=proposal)
+            _write_json(args.output, payload)
+            print(json.dumps({"record_id": record["record_id"], "mode": args.mode, "output": str(args.output)}, sort_keys=True))
+            return 0
+        if args.gold_command == "annotate":
+            annotations = json.loads(args.output.read_text()) if args.output.exists() else []
+            if not isinstance(annotations, list): raise ValueError("annotations output must be an array")
+            annotation = next((item for item in annotations if item.get("record_id") == args.record_id and item.get("reviewer_id") == args.reviewer and item.get("mode") == args.mode), None)
+            if annotation is None:
+                annotation = new_annotation(args.record_id, args.reviewer, args.mode, {})
+                annotations.append(annotation)
+            field: dict[str, Any] = {"status": args.status}
+            if args.status == "value" or args.value: field["acceptable_values"] = args.value
+            if getattr(args, "proposed_value", None) is not None: field["proposed_value"] = args.proposed_value
+            if getattr(args, "confidence", None) is not None: field["confidence"] = args.confidence
+            if getattr(args, "inferability", None) is not None: field["inferability"] = args.inferability
+            if getattr(args, "ambiguity", None) is not None: field["ambiguity"] = args.ambiguity
+            if getattr(args, "alternatives", None): field["alternatives"] = args.alternatives
+            if getattr(args, "notes", None): field["notes"] = args.notes
+            annotation["fields"][args.field] = field
+            from .gold_validation import validate_gold_annotation
+            validate_gold_annotation(annotation)
+            _write_json(args.output, annotations)
+            print(json.dumps({"record_id": args.record_id, "reviewer": args.reviewer, "field": args.field, "status": args.status}, sort_keys=True))
+            return 0
+        if args.gold_command == "adjudicate":
+            annotations = json.loads(args.annotations.read_text())
+            resolved: dict[str, Any] = {"status": args.status}
+            if args.status == "value" or args.value: resolved["acceptable_values"] = args.value
+            note = getattr(args, "notes", "")
+            if note: resolved["notes"] = note
+            item = adjudicate(args.record_id, args.field, args.resolver, resolved, annotations, note=note)
+            adjudications = json.loads(args.output.read_text()) if args.output.exists() else []
+            adjudications.append(item)
+            _write_json(args.output, adjudications)
+            print(json.dumps({"record_id": args.record_id, "field": args.field, "reviewer_count": len(item["source_reviewers"])}, sort_keys=True))
+            return 0
+        if args.gold_command == "freeze":
+            result = freeze_gold_set(json.loads(args.selection.read_text()), json.loads(args.annotations.read_text()), json.loads(args.adjudications.read_text()), args.output)
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 0
+        if args.gold_command in {"benchmark", "ablation", "pilot"}:
+            records = [json.loads(path.read_text()) for path in args.intelligence]
+            client = ClientTrainingContext.from_path(args.client).projection
+            labels = []
+            if getattr(args, "annotations", None) and args.annotations.exists():
+                labels = json.loads(args.annotations.read_text())
+            factory = lambda: SemanticReconstructionService(RuleBasedSemanticIntentAdapter())
+            if args.gold_command == "benchmark":
+                result = {
+                    "baseline_local": benchmark_adapter(records, client, labels, factory, mode="single_pass", input_variant="full", name="rule-local-single-pass"),
+                    "staged": benchmark_adapter(records, client, labels, factory, mode="staged", input_variant="full", name="rule-local-staged"),
+                }
+            elif args.gold_command == "ablation":
+                result = run_ablation(records, client, labels, factory)
+            else:
+                result = pilot(records, client, factory, limit=args.limit)
+            _write_json(args.output, result)
+            print(json.dumps({"command": args.gold_command, "records": len(records), "output": str(args.output)}, sort_keys=True))
+            return 0
+        if args.gold_command == "contamination-test":
+            record = json.loads(args.intelligence.read_text())
+            contexts = {path.stem: ClientTrainingContext.from_path(path).projection for path in args.clients}
+            result = contamination_test(record, contexts, SemanticReconstructionService(RuleBasedSemanticIntentAdapter()))
+            _write_json(args.output, result)
+            print(json.dumps({"pass": result["pass"], "client_context_contamination_rate": result["client_context_contamination_rate"]}, sort_keys=True))
             return 0
     if args.command == "watch":
         stop = False

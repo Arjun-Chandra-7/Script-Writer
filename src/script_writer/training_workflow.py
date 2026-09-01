@@ -10,6 +10,7 @@ from .training_contracts import ClientTrainingContext, canonical_json, evidence_
 from .training_cache import TrainingCompilationCache
 from .training_intent import SemanticIntentReconstructor
 from .semantic_reconstruction import RuleBasedSemanticIntentAdapter, SemanticInferenceCache, SemanticReconstructionService
+from .gold_validation import training_exclusions_from_gold_manifest
 from .training_dataset import (
     CorpusCompilation,
     CorpusTrainingCompiler,
@@ -39,6 +40,8 @@ def build_training_artifacts(
     minimum_reviewed_examples: int = 25,
     minimum_exported_examples: int = 100,
     semantic_rules: bool = False,
+    gold_manifest: dict[str, Any] | None = None,
+    semantic_quality_gold_evaluated: bool = False,
 ) -> dict[str, Any]:
     if not intelligence_paths:
         raise ValueError("at least one ScriptIntelligenceRecord is required")
@@ -48,7 +51,8 @@ def build_training_artifacts(
     cache = TrainingCompilationCache(output_dir / ".training-cache" / "compilations.sqlite3")
     semantic_cache = SemanticInferenceCache(output_dir / ".training-cache" / "semantic.sqlite3") if semantic_rules else None
     reconstructor = SemanticIntentReconstructor(SemanticReconstructionService(RuleBasedSemanticIntentAdapter(), semantic_cache)) if semantic_rules else None
-    compiler = CorpusTrainingCompiler(split_salt=split_salt, cache=cache, reconstructor=reconstructor)
+    exclusions = training_exclusions_from_gold_manifest(gold_manifest) if gold_manifest else None
+    compiler = CorpusTrainingCompiler(split_salt=split_salt, cache=cache, reconstructor=reconstructor, gold_exclusions=exclusions)
     first = compiler.compile(records, client.projection)
     second = compiler.compile(records, client.projection)
     cache.close()
@@ -91,7 +95,7 @@ def build_training_artifacts(
         minimum_reviewed_examples=minimum_reviewed_examples,
         minimum_exported_examples=minimum_exported_examples,
         deterministic_regeneration_verified=deterministic,
-        semantic_quality_gold_evaluated=False,
+        semantic_quality_gold_evaluated=semantic_quality_gold_evaluated,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     client_bytes = (json.dumps(client.projection, indent=2, ensure_ascii=False, sort_keys=True) + "\n").encode()

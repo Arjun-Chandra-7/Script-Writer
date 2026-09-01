@@ -68,6 +68,9 @@ Implemented capabilities:
   compact CLI review workflow.
 - staged semantic intent reconstruction with fail-closed adapters, field-level
   leakage/compression checks, gold-set evaluation helpers, and shard export.
+- real-corpus semantic quality-validation workflow: stratified, evaluation-only
+  gold selection; blind/assisted review; adjudication; frozen gold exclusions;
+  adapter, ablation, contamination, pilot, calibration, and anomaly reports.
 
 ## What does not exist yet
 
@@ -135,4 +138,5 @@ one continuation example is exported. See the committed
 See [architecture](docs/architecture.md), [operations](docs/operations.md),
 [training-data pipeline](docs/training-data.md), [research](docs/research.md),
 [semantic reconstruction](docs/semantic-reconstruction.md), and the
-machine-readable [schemas](schemas/).
+[semantic validation](docs/semantic-validation.md), and the machine-readable
+[schemas](schemas/).

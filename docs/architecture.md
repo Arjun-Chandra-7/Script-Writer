@@ -270,3 +270,6 @@ training-data builds at the top of the target range.
 The authoritative training-data design is in `docs/training-data.md`.
 Semantic adapter design and current validation limits are in
 `docs/semantic-reconstruction.md`.
+The evaluation-only gold set and quality-validation workflow are in
+`docs/semantic-validation.md`; gold source clusters are excluded from all
+future training datasets.

@@ -170,6 +170,13 @@ adapter is intentionally not selected by CLI and has no implicit network path.
 Use `dataset build --semantic-rules` only for a dry-run candidate audit; it does
 not prove semantic quality or open the training gate.
 
+## Human semantic validation
+
+Run `gold sample`, then use blind review before assisted review for the core
+fields. Preserve reviewer annotations and append adjudications; freeze the
+result before benchmarking. The full reproducible command sequence and its
+current one-real-record limitation are in `docs/semantic-validation.md`.
+
 ## Monitoring and recovery
 
 ```bash

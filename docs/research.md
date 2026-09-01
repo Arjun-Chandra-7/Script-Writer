@@ -73,6 +73,11 @@ audience problem, and CTA. The fixture gold annotation accepts this output, but
 one fixture is not a human quality study; a 100–200-record stratified review is
 required before claiming calibrated reconstruction quality.
 
+The new validation tooling deliberately records unsupported inference,
+unnecessary abstention, central-idea leakage/compression, client-context
+contamination, confidence calibration, and input ablations separately. It does
+not optimize a global completion score. See `docs/semantic-validation.md`.
+
 The historical `.docx` remains unchanged for provenance.
 
 ## Retrieval choices

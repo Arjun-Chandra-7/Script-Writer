@@ -144,3 +144,8 @@ training experiments.
 Semantic reconstruction is now implemented as a candidate-enabling layer; its
 quality gate remains external to eligibility. See
 `docs/semantic-reconstruction.md`.
+
+Frozen semantic gold records, their re-extractions, and lexical near duplicates
+are evaluation-only and must be passed to `CorpusTrainingCompiler` through its
+gold exclusions before any future SFT build. The workflow and proposed gates
+are documented in `docs/semantic-validation.md`.

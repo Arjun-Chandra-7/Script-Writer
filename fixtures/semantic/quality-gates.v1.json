@@ -1,0 +1,14 @@
+{
+  "version": "semantic-quality-gates-v1",
+  "status": "proposed_until_human_gold_review",
+  "note": "These precision-first gates are frozen before the production gold study. They do not make fixture evaluation sufficient.",
+  "thresholds": {
+    "minimum_human_reviewed_sources": 100,
+    "topic_acceptance": 0.9,
+    "central_idea_acceptance": 0.85,
+    "objective_acceptance": 0.8,
+    "format_acceptance": 0.8,
+    "unsupported_audience_inference": 0.05,
+    "false_cta_inference": 0.02
+  }
+}

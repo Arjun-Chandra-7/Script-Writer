@@ -14,6 +14,7 @@ from .dataset_design import (
     LeakageGuard,
     LeakageIdentity,
     assign_universal_training_split,
+    hamming_distance,
     simhash64,
 )
 from .text_analysis import normalize_transcript
@@ -63,11 +64,13 @@ class CorpusCompilation:
 
 
 class CorpusTrainingCompiler:
-    def __init__(self, *, split_salt: str, near_duplicate_distance: int = 3, cache: Any = None, reconstructor: IntentReconstructor | None = None):
+    def __init__(self, *, split_salt: str, near_duplicate_distance: int = 3, cache: Any = None, reconstructor: IntentReconstructor | None = None, gold_exclusions: dict[str, Any] | None = None):
         self.split_salt = split_salt
         self.guard = LeakageGuard(near_duplicate_distance)
         self.example_compiler = TrainingExampleCompiler(reconstructor)
         self.cache = cache
+        self.gold_source_hashes = set((gold_exclusions or {}).get("source_content_hashes", []))
+        self.gold_simhashes = {int(value, 16) if isinstance(value, str) else int(value) for value in (gold_exclusions or {}).get("transcript_simhash64", [])}
 
     def compile(
         self, records: list[dict[str, Any]], client_context: dict[str, Any]
@@ -86,6 +89,10 @@ class CorpusTrainingCompiler:
                 continue
             normalized = normalize_transcript(transcript)
             transcript_sha = hashlib.sha256(normalized.encode()).hexdigest()
+            transcript_simhash = simhash64(normalized)
+            if source_hash in self.gold_source_hashes or any(hamming_distance(transcript_simhash, candidate) <= self.guard.threshold for candidate in self.gold_simhashes):
+                early_rejections.append({"record_id": record.get("record_id"), "reasons": ["gold_evaluation_source_or_near_duplicate_excluded"]})
+                continue
             if source_hash in seen_sources or transcript_sha in seen_transcripts:
                 exact_duplicate_count += 1
                 early_rejections.append(
@@ -98,7 +105,7 @@ class CorpusTrainingCompiler:
                 LeakageIdentity(
                     source_content_hash=source_hash,
                     transcript_sha256=transcript_sha,
-                    transcript_simhash64=simhash64(normalized),
+                    transcript_simhash64=transcript_simhash,
                 )
             )
             usable.append(record)

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VIRALYST frozen semantic gold-set manifest",
+  "type": "object",
+  "required": ["schema_version", "selection", "annotations", "adjudications", "resolved_annotations", "evaluation_only", "training_excluded_source_hashes", "semantic_input_version"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "evaluation_only": {"const": true},
+    "training_excluded_source_hashes": {"type": "array", "items": {"type": "string"}},
+    "semantic_input_version": {"const": "1.0.0"}
+  }
+}

@@ -64,10 +64,39 @@ def _brief_template(intelligence: dict[str, Any], client: dict[str, Any]) -> dic
     }
 
 
-def build_prompt_request(intelligence: dict[str, Any], client: dict[str, Any], stage: str) -> dict[str, Any]:
+def build_semantic_input(intelligence: dict[str, Any], client: dict[str, Any], variant: str = "full") -> dict[str, Any]:
+    """Canonical, versioned input shared by every semantic adapter experiment."""
+    if variant not in {"transcript", "structure", "delivery", "full", "full_with_client"}:
+        raise ValueError("unsupported semantic input variant")
     transcript = str(evidence_value(intelligence["content"]["clean_transcript"]) or "")
+    value = {
+        "semantic_input_version": "1.0.0",
+        "variant": variant,
+        "transcript": transcript,
+    }
+    if variant in {"structure", "delivery", "full", "full_with_client"}:
+        value.update({
+            "hook_mechanisms": [x.get("mechanism") for x in intelligence["hook_intelligence"].get("mechanisms", [])],
+            "beat_roles": [x.get("role") for x in intelligence["script_structure"].get("major_beats", [])],
+        })
+    if variant in {"delivery", "full", "full_with_client"}:
+        value["delivery"] = intelligence.get("delivery", {})
+    if variant in {"full", "full_with_client"}:
+        value["script_relevant_evidence"] = {
+            "persuasion": intelligence.get("persuasion", {}),
+            "information_density": intelligence.get("information_density", {}),
+            "linguistic_characteristics": intelligence.get("linguistic_characteristics", {}),
+        }
+    if variant == "full_with_client":
+        value["client_context"] = {key: field for key, field in client.get("fields", {}).items() if key in {"niche", "audience", "tone", "content_pillars", "factual_constraints", "prohibited_topics_claims"}}
+    return value
+
+
+def build_prompt_request(intelligence: dict[str, Any], client: dict[str, Any], stage: str, *, input_variant: str = "full") -> dict[str, Any]:
+    source = build_semantic_input(intelligence, client, input_variant)
     return {
         "schema_version": SEMANTIC_PROMPT_VERSION,
+        "semantic_input_version": source["semantic_input_version"],
         "stage": stage,
         "instructions": [
             "Infer minimum sufficient conditioning, never the literal creator prompt.",
@@ -76,10 +105,7 @@ def build_prompt_request(intelligence: dict[str, Any], client: dict[str, Any], s
             "Client context is a weak disambiguation prior, not source truth.",
             "Return concise field values with transcript or canonical paths supporting each inference.",
         ],
-        "transcript": transcript,
-        "hook_mechanisms": [x.get("mechanism") for x in intelligence["hook_intelligence"].get("mechanisms", [])],
-        "beat_roles": [x.get("role") for x in intelligence["script_structure"].get("major_beats", [])],
-        "client_context": {key: value for key, value in client.get("fields", {}).items() if key in {"niche", "audience", "tone", "content_pillars", "factual_constraints", "prohibited_topics_claims"}},
+        **source,
     }
 
 
@@ -112,22 +138,22 @@ class RuleBasedSemanticIntentAdapter:
         def item(value: Any, confidence: float) -> dict[str, Any]:
             return {"value": value, "confidence": confidence, "evidence_paths": ["$.content.clean_transcript"]}
         if "doge" in text and "government workers" in text:
-            if stage == "topic_central_idea":
+            if stage in {"topic_central_idea", "single_pass"}:
                 result.update({
                     "topic": item("DOGE government workforce cuts", 0.72),
                     "central_idea": item("The speaker argues that arbitrary workforce cuts harm public workers.", 0.68),
                 })
-            elif stage == "objective_format":
+            if stage in {"objective_format", "single_pass"}:
                 result.update({
                     "content_objective": item("persuade", 0.63),
                     "content_format": item("commentary", 0.78),
                 })
-            elif stage == "conditional_context":
+            if stage in {"conditional_context", "single_pass"}:
                 result.update({
                     "required_concepts": item(["DOGE", "government workers", "consequences"], 0.75),
                     "hook_intent": item("open a critical discussion through a question", 0.58),
                 })
-        elif stage == "objective_format" and ("how to" in text or "step" in text):
+        elif stage in {"objective_format", "single_pass"} and ("how to" in text or "step" in text):
             result.update({"content_objective": item("educate", 0.62), "content_format": item("tutorial", 0.62)})
         return result
 
@@ -193,11 +219,14 @@ class SemanticReconstructionService:
     def __init__(self, adapter: SemanticIntentAdapter, cache: SemanticInferenceCache | None = None, retries: int = 2):
         self.adapter, self.cache, self.retries = adapter, cache, retries
 
-    def reconstruct(self, intelligence: dict[str, Any], client: dict[str, Any]) -> dict[str, Any]:
+    def reconstruct(self, intelligence: dict[str, Any], client: dict[str, Any], *, mode: str = "staged", input_variant: str = "full_with_client") -> dict[str, Any]:
+        if mode not in {"staged", "single_pass"}:
+            raise ValueError("mode must be staged or single_pass")
         merged: dict[str, Any] = {}
         cache_hits = 0
-        for stage in ("topic_central_idea", "objective_format", "conditional_context"):
-            request = build_prompt_request(intelligence, client, stage)
+        stages = ("topic_central_idea", "objective_format", "conditional_context") if mode == "staged" else ("single_pass",)
+        for stage in stages:
+            request = build_prompt_request(intelligence, client, stage, input_variant=input_variant)
             key = hashlib.sha256((canonical_json(request) + self.adapter.version + self.adapter.prompt_version).encode()).hexdigest()
             response = self.cache.get(key) if self.cache else None
             if response is not None:
@@ -231,7 +260,7 @@ class SemanticReconstructionService:
             brief[field] = model_inference(node["value"], [SourceRef(path) for path in node.get("evidence_paths", [])], f"{self.adapter.version}:{self.adapter.prompt_version}", float(node["confidence"]))
         source = str(evidence_value(intelligence["identity"]["source_content_hash"]) or intelligence["record_id"])
         brief["brief_id"] = f"msb:{hashlib.sha256((source + self.adapter.version).encode()).hexdigest()[:24]}"
-        brief["adapter"] = {"version": self.adapter.version, "prompt_version": self.adapter.prompt_version, "stages": 3, "cache_hits": cache_hits}
+        brief["adapter"] = {"version": self.adapter.version, "prompt_version": self.adapter.prompt_version, "stages": len(stages), "mode": mode, "semantic_input_version": "1.0.0", "input_variant": input_variant, "cache_hits": cache_hits}
         validate_minimum_sufficient_brief(brief)
         return brief
 
