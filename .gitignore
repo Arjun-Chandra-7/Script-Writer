@@ -10,6 +10,7 @@ data/
 state/
 credentials/
 *.part
+.training-cache/
 
 # Model artifacts are promoted through the model registry, not Git.
 artifacts/

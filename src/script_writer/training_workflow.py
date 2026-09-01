@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import copy
 from pathlib import Path
 from typing import Any
 
 from .training_contracts import ClientTrainingContext, canonical_json, evidence_value
+from .training_cache import TrainingCompilationCache
 from .training_dataset import (
+    CorpusCompilation,
     CorpusTrainingCompiler,
     ReviewStore,
     SamplingPolicy,
@@ -32,31 +35,61 @@ def build_training_artifacts(
     split_salt: str,
     sampling_policy: SamplingPolicy = SamplingPolicy(),
     minimum_reviewed_examples: int = 25,
+    minimum_exported_examples: int = 100,
 ) -> dict[str, Any]:
     if not intelligence_paths:
         raise ValueError("at least one ScriptIntelligenceRecord is required")
     records = [json.loads(path.read_text()) for path in sorted(intelligence_paths)]
     client = ClientTrainingContext.from_path(client_path)
-    compiler = CorpusTrainingCompiler(split_salt=split_salt)
+    decisions = ReviewStore(output_dir / "reviews.json").decisions()
+    cache = TrainingCompilationCache(output_dir / ".training-cache" / "compilations.sqlite3")
+    compiler = CorpusTrainingCompiler(split_salt=split_salt, cache=cache)
     first = compiler.compile(records, client.projection)
     second = compiler.compile(records, client.projection)
-    deterministic = first == second
+    cache.close()
+    deterministic = (
+        first.examples == second.examples
+        and first.rejections == second.rejections
+        and first.source_groups == second.source_groups
+    )
+    reviewed_examples = []
+    reviewed_rejections = list(first.rejections)
+    for example in first.examples:
+        updated = copy.deepcopy(example)
+        decision = decisions.get(example["example_id"])
+        if decision:
+            updated["review"] = {"status": "reviewed", **decision}
+            if decision["decision"] in {"reject", "flag"}:
+                reason = "human_rejected" if decision["decision"] == "reject" else "human_review_flagged"
+                updated["quality"]["eligibility"] = "ineligible"
+                updated["quality"]["exclusion_reasons"] = sorted(
+                    set([*updated["quality"]["exclusion_reasons"], reason])
+                )
+                reviewed_rejections.append(
+                    {"example_id": updated["example_id"], "objective": updated["identity"]["dataset_objective"], "reasons": [reason]}
+                )
+        reviewed_examples.append(updated)
+    compilation = CorpusCompilation(
+        tuple(reviewed_examples), tuple(reviewed_rejections), first.source_groups,
+        first.exact_duplicate_count, first.near_duplicate_cluster_count,
+        first.cache_hits, first.cache_misses,
+    )
     builder = TrainingDatasetBuilder(output_dir / "datasets", sampling_policy)
-    build = builder.build(first, client.projection)
-    audit = dataset_audit(first, build)
-    decisions = ReviewStore(output_dir / "reviews.json").decisions()
+    build = builder.build(compilation, client.projection)
+    audit = dataset_audit(compilation, build)
     readiness = training_readiness_report(
-        first,
+        compilation,
         build,
         audit,
-        reviewed_examples=len(decisions),
+        reviewed_examples=sum(example_id in decisions for example_id in {item["example_id"] for item in compilation.examples}),
         minimum_reviewed_examples=minimum_reviewed_examples,
+        minimum_exported_examples=minimum_exported_examples,
         deterministic_regeneration_verified=deterministic,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     client_bytes = (json.dumps(client.projection, indent=2, ensure_ascii=False, sort_keys=True) + "\n").encode()
     client_output = _write_content_addressed(output_dir, "client-training-context", "json", client_bytes)
-    examples_bytes = ("\n".join(canonical_json(item) for item in first.examples) + "\n").encode()
+    examples_bytes = ("\n".join(canonical_json(item) for item in compilation.examples) + "\n").encode()
     examples_output = _write_content_addressed(output_dir, "compiled-examples", "jsonl", examples_bytes)
     source_lines = []
     for record in records:

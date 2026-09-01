@@ -1,0 +1,14 @@
+{"example_id":"ste:951450a853fa816fd2f926cf","objective":"full_script_sft","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:afeb82a79eca4f6795c400fb","objective":"hook_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:3941d576baf2beadf10020f0","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:3cb3bbfb964adcb57d95ac1f","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:4951b8c72dadbdf6574bd584","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:5218f3eff7dd27e0a13971d8","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:59cfb588076acb317a79b00b","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:62b050cf1ee73672cf617838","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:953e24b626b1867b9b62c3b5","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:c291706e556ab592a71feb44","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:e37e32f3d85b3c8376032404","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:f396f5c321ced94bbc50f784","objective":"section_generation","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:244625c613f485023628e9bf","objective":"structure_planning","reasons":["missing_reliable_topic_or_central_idea"]}
+{"example_id":"ste:072278dc1523e958236b9fa7","objective":"style_conditioned","reasons":["missing_reliable_topic_or_central_idea"]}

@@ -29,6 +29,8 @@ from script_writer.training_dataset import (
     training_readiness_report,
 )
 from script_writer.training_leakage import leakage_metrics
+from script_writer.training_cache import TrainingCompilationCache
+from script_writer.training_workflow import build_training_artifacts
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +39,14 @@ REAL = json.loads((ROOT / "examples/compiled/86c1671e8a3a7b46.script-intelligenc
 
 def context() -> ClientTrainingContext:
     return ClientTrainingContext.from_path(ROOT / "fixtures/client.example.json")
+
+
+def record_with_test_topic() -> dict:
+    record = copy.deepcopy(REAL)
+    record["content"]["topic"] = heuristic(
+        "technology accountability", [], "explicit_test_semantic_adapter", 0.9
+    )
+    return record
 
 
 class TrainingDataTests(unittest.TestCase):
@@ -62,6 +72,9 @@ class TrainingDataTests(unittest.TestCase):
         self.assertIn(TrainingObjective.STYLE.value, objectives)
         self.assertNotIn(TrainingObjective.CTA.value, objectives)
         self.assertTrue(all(item["quality"]["performance_signal_used"] is False for item in result.examples))
+        full = next(item for item in result.examples if item["identity"]["dataset_objective"] == TrainingObjective.FULL_SCRIPT.value)
+        self.assertEqual(full["quality"]["eligibility"], "ineligible")
+        self.assertIn("missing_reliable_topic_or_central_idea", full["quality"]["exclusion_reasons"])
 
     def test_every_real_example_validates_and_preserves_source_split(self) -> None:
         result = CorpusTrainingCompiler(split_salt="tests").compile([REAL], context().projection)
@@ -158,12 +171,20 @@ class TrainingDataTests(unittest.TestCase):
         groups = LeakageGuard(near_duplicate_hamming_distance=16).cluster(identities)
         self.assertEqual(groups["a"], groups["b"])
 
+    def test_exact_duplicate_source_is_suppressed_before_example_expansion(self) -> None:
+        compiler = CorpusTrainingCompiler(split_salt="tests")
+        single = compiler.compile([REAL], context().projection)
+        duplicate = compiler.compile([REAL, copy.deepcopy(REAL)], context().projection)
+        self.assertEqual(len(single.examples), len(duplicate.examples))
+        self.assertEqual(duplicate.exact_duplicate_count, 1)
+        self.assertIn("exact_duplicate_suppressed", duplicate.rejections[0]["reasons"])
+
     def test_universal_split_does_not_depend_on_objective(self) -> None:
         values = {assign_universal_training_split("cluster-a", salt="stable") for _ in TrainingObjective}
         self.assertEqual(len(values), 1)
 
     def test_manifests_are_immutable_and_reproducible(self) -> None:
-        compilation = CorpusTrainingCompiler(split_salt="tests").compile([REAL], context().projection)
+        compilation = CorpusTrainingCompiler(split_salt="tests").compile([record_with_test_topic()], context().projection)
         with tempfile.TemporaryDirectory() as directory:
             builder = TrainingDatasetBuilder(Path(directory))
             first = builder.build(compilation, context().projection)
@@ -173,7 +194,7 @@ class TrainingDataTests(unittest.TestCase):
                 self.assertTrue(Path(manifest["manifest_path"]).exists())
 
     def test_sampling_policy_is_explicit_and_recorded(self) -> None:
-        compilation = CorpusTrainingCompiler(split_salt="tests").compile([REAL], context().projection)
+        compilation = CorpusTrainingCompiler(split_salt="tests").compile([record_with_test_topic()], context().projection)
         with tempfile.TemporaryDirectory() as directory:
             build = TrainingDatasetBuilder(
                 Path(directory), SamplingPolicy(max_examples_per_source_per_objective=1)
@@ -191,8 +212,13 @@ class TrainingDataTests(unittest.TestCase):
                 compilation, build, audit, deterministic_regeneration_verified=True
             )
             self.assertEqual(audit["total_source_videos"], 1)
+            self.assertEqual(audit["language_distribution"], {"en": 1})
+            self.assertEqual(audit["duration_distribution_seconds"], {"30-59": 1})
+            self.assertEqual(audit["cta_source_count"], 0)
             self.assertEqual(report["status"], "not_training_ready")
             self.assertIn("sufficient_human_inspection", report["failed_gates"])
+            self.assertIn("sufficient_eligible_examples", report["failed_gates"])
+            self.assertIn("validation_and_test_sets_present", report["failed_gates"])
             self.assertTrue(report["gates"]["zero_cross_split_source_leakage"])
 
     def test_review_store_accept_reject_and_flag(self) -> None:
@@ -204,12 +230,43 @@ class TrainingDataTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 store.record("three", "maybe")
 
+    def test_rejected_review_is_excluded_on_rebuild(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            initial = build_training_artifacts(
+                [ROOT / "examples/compiled/86c1671e8a3a7b46.script-intelligence.v1.json"],
+                ROOT / "fixtures/client.example.json", output,
+                split_salt="tests", minimum_exported_examples=1,
+            )
+            continuation_path = Path(initial["manifests"][TrainingObjective.CONTINUATION.value]["data_file"])
+            full_path = output / "datasets" / continuation_path
+            example = json.loads(full_path.read_text().splitlines()[0])
+            ReviewStore(output / "reviews.json").record(example["example_id"], "reject", note="bad reconstruction")
+            rebuilt = build_training_artifacts(
+                [ROOT / "examples/compiled/86c1671e8a3a7b46.script-intelligence.v1.json"],
+                ROOT / "fixtures/client.example.json", output,
+                split_salt="tests", minimum_exported_examples=1,
+            )
+            self.assertNotIn(TrainingObjective.CONTINUATION.value, rebuilt["manifests"])
+            self.assertIn("human_rejected", rebuilt["summary"]["rejection_reasons"])
+
     def test_compilation_is_deterministic(self) -> None:
         compiler = CorpusTrainingCompiler(split_salt="tests")
         first = compiler.compile([REAL], context().projection)
         second = compiler.compile([REAL], context().projection)
         self.assertEqual(first.examples, second.examples)
         self.assertEqual(first.rejections, second.rejections)
+
+    def test_incremental_cache_avoids_recompiling_unchanged_record(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            cache = TrainingCompilationCache(Path(directory) / "cache.sqlite3")
+            compiler = CorpusTrainingCompiler(split_salt="tests", cache=cache)
+            first = compiler.compile([REAL], context().projection)
+            second = compiler.compile([REAL], context().projection)
+            cache.close()
+            self.assertEqual((first.cache_hits, first.cache_misses), (0, 1))
+            self.assertEqual((second.cache_hits, second.cache_misses), (1, 0))
+            self.assertEqual(first.examples, second.examples)
 
 
 if __name__ == "__main__":

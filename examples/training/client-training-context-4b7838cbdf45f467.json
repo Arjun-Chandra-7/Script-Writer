@@ -1,0 +1,156 @@
+{
+  "client_id": "viralyst-example-client",
+  "context_id": "clientctx:viralyst-example-client:34b257e01068b0ae",
+  "fields": {
+    "audience": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.audience"
+        }
+      ],
+      "value": "English-speaking viewers interested in technology and public affairs"
+    },
+    "beliefs": {
+      "evidence_type": "unknown",
+      "reason": "beliefs is absent from client context",
+      "sources": [],
+      "value": null
+    },
+    "brand_voice": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.brand_voice"
+        }
+      ],
+      "value": [
+        "direct",
+        "specific",
+        "critical without fabricated certainty"
+      ]
+    },
+    "content_pillars": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.content_pillars"
+        }
+      ],
+      "value": [
+        "technology leadership",
+        "public accountability",
+        "social consequences"
+      ]
+    },
+    "cta_rules": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.cta_preferences"
+        }
+      ],
+      "value": {
+        "require_cta": false
+      }
+    },
+    "differentiation": {
+      "evidence_type": "unknown",
+      "reason": "differentiation is absent from client context",
+      "sources": [],
+      "value": null
+    },
+    "factual_constraints": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.factual_constraints"
+        }
+      ],
+      "value": [
+        "Do not present unverified allegations as established fact"
+      ]
+    },
+    "identity_positioning": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.positioning"
+        }
+      ],
+      "value": "Evidence-led public-interest technology commentary"
+    },
+    "niche": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.niche"
+        }
+      ],
+      "value": "technology and public-interest commentary"
+    },
+    "products_offers": {
+      "evidence_type": "unknown",
+      "reason": "products_offers is absent from client context",
+      "sources": [],
+      "value": null
+    },
+    "prohibited_topics_claims": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.prohibited_claims"
+        }
+      ],
+      "value": [
+        "invented performance claims",
+        "unsupported personal allegations"
+      ]
+    },
+    "recurring_narratives": {
+      "evidence_type": "unknown",
+      "reason": "recurring_narratives is absent from client context",
+      "sources": [],
+      "value": null
+    },
+    "subniche": {
+      "evidence_type": "unknown",
+      "reason": "subniche is absent from client context",
+      "sources": [],
+      "value": null
+    },
+    "tone": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.tone"
+        }
+      ],
+      "value": [
+        "conversational",
+        "evidence-conscious"
+      ]
+    },
+    "vocabulary": {
+      "evidence_type": "observed",
+      "sources": [
+        {
+          "path": "fixtures/client.example.json$.vocabulary_preferences"
+        }
+      ],
+      "value": {
+        "avoid": [
+          "empty hype"
+        ],
+        "prefer": [
+          "plain language"
+        ]
+      }
+    }
+  },
+  "schema_version": "1.0.0",
+  "source": {
+    "path": "fixtures/client.example.json",
+    "sha256": "34b257e01068b0ae1ae2d5d17d233fc0088f85b5a38a74fa454ea0ce995f516b"
+  }
+}

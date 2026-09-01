@@ -1,0 +1,35 @@
+{
+  "dataset_summary": {
+    "exported_example_count": 1,
+    "manifest_count": 1,
+    "source_count": 1
+  },
+  "failed_gates": [
+    "sufficient_eligible_examples",
+    "sufficient_human_inspection",
+    "validation_and_test_sets_present"
+  ],
+  "gates": {
+    "all_examples_schema_valid": true,
+    "client_context_version_frozen": true,
+    "compiler_version_frozen": true,
+    "deterministic_regeneration_verified": true,
+    "immutable_objective_manifests_generated": true,
+    "rejection_reasons_recorded": true,
+    "sufficient_eligible_examples": false,
+    "sufficient_human_inspection": false,
+    "validation_and_test_membership_frozen": true,
+    "validation_and_test_sets_present": false,
+    "zero_cross_split_duplicate_leakage": true,
+    "zero_cross_split_source_leakage": true,
+    "zero_high_severity_target_leakage_in_export": true
+  },
+  "minimum_exported_examples": 100,
+  "review": {
+    "minimum_required": 25,
+    "reviewed_examples": 0
+  },
+  "schema_version": "1.0.0",
+  "status": "not_training_ready",
+  "training_execution_enabled": false
+}

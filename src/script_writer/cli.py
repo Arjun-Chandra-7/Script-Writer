@@ -140,6 +140,7 @@ def build_parser() -> argparse.ArgumentParser:
     dataset_build.add_argument("--cluster-cap", type=int)
     dataset_build.add_argument("--source-cap", type=int)
     dataset_build.add_argument("--minimum-reviews", type=int, default=25)
+    dataset_build.add_argument("--minimum-examples", type=int, default=100)
     dataset_show = dataset_commands.add_parser("show", help="show one compact review view")
     dataset_show.add_argument("directory", type=Path)
     dataset_show.add_argument("example_id")
@@ -324,6 +325,7 @@ def main(argv: list[str] | None = None) -> int:
                     max_examples_per_source_per_objective=args.source_cap,
                 ),
                 minimum_reviewed_examples=args.minimum_reviews,
+                minimum_exported_examples=args.minimum_examples,
             )
             print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
             return 0

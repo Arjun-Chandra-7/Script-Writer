@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import tempfile
+import copy
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,13 +49,16 @@ class CorpusCompilation:
     source_groups: dict[str, str]
     exact_duplicate_count: int
     near_duplicate_cluster_count: int
+    cache_hits: int = 0
+    cache_misses: int = 0
 
 
 class CorpusTrainingCompiler:
-    def __init__(self, *, split_salt: str, near_duplicate_distance: int = 3):
+    def __init__(self, *, split_salt: str, near_duplicate_distance: int = 3, cache: Any = None):
         self.split_salt = split_salt
         self.guard = LeakageGuard(near_duplicate_distance)
         self.example_compiler = TrainingExampleCompiler()
+        self.cache = cache
 
     def compile(
         self, records: list[dict[str, Any]], client_context: dict[str, Any]
@@ -62,6 +66,9 @@ class CorpusTrainingCompiler:
         identities: list[LeakageIdentity] = []
         usable: list[dict[str, Any]] = []
         early_rejections: list[dict[str, Any]] = []
+        seen_sources: set[str] = set()
+        seen_transcripts: set[str] = set()
+        exact_duplicate_count = 0
         for record in records:
             transcript = str(evidence_value(record.get("content", {}).get("clean_transcript")) or "")
             source_hash = str(evidence_value(record.get("identity", {}).get("source_content_hash")) or "")
@@ -69,32 +76,53 @@ class CorpusTrainingCompiler:
                 early_rejections.append({"record_id": record.get("record_id"), "reasons": ["missing_script_or_source_identity"]})
                 continue
             normalized = normalize_transcript(transcript)
+            transcript_sha = hashlib.sha256(normalized.encode()).hexdigest()
+            if source_hash in seen_sources or transcript_sha in seen_transcripts:
+                exact_duplicate_count += 1
+                early_rejections.append(
+                    {"record_id": record.get("record_id"), "reasons": ["exact_duplicate_suppressed"]}
+                )
+                continue
+            seen_sources.add(source_hash)
+            seen_transcripts.add(transcript_sha)
             identities.append(
                 LeakageIdentity(
                     source_content_hash=source_hash,
-                    transcript_sha256=hashlib.sha256(normalized.encode()).hexdigest(),
+                    transcript_sha256=transcript_sha,
                     transcript_simhash64=simhash64(normalized),
                 )
             )
             usable.append(record)
         groups = self.guard.cluster(identities)
-        source_counts = Counter(item.source_content_hash for item in identities)
-        transcript_counts = Counter(item.transcript_sha256 for item in identities)
-        exact_duplicate_count = max(
-            sum(count - 1 for count in source_counts.values()),
-            sum(count - 1 for count in transcript_counts.values()),
-        )
         cluster_sizes = Counter(groups.values())
         near_duplicate_cluster_count = sum(1 for count in cluster_sizes.values() if count > 1)
         examples: list[dict[str, Any]] = []
         rejections = list(early_rejections)
+        cache_hits = 0
+        cache_misses = 0
         for record, identity in zip(usable, identities):
             group_id = groups[identity.source_content_hash]
             split = assign_universal_training_split(group_id, salt=self.split_salt)
-            result = self.example_compiler.compile(
-                record, client_context, group_id=group_id, split=split
-            )
-            examples.extend(result.examples)
+            cache_key = hashlib.sha256(
+                (canonical_json(record) + canonical_json(client_context) + self.example_compiler.reconstructor.version).encode()
+            ).hexdigest()
+            result = self.cache.get(cache_key) if self.cache is not None else None
+            if result is None:
+                cache_misses += 1
+                result = self.example_compiler.compile(
+                    record, client_context, group_id=group_id, split=split
+                )
+                if self.cache is not None:
+                    self.cache.put(cache_key, identity.source_content_hash, result)
+            else:
+                cache_hits += 1
+            patched_examples = []
+            for example in result.examples:
+                patched = copy.deepcopy(example)
+                patched["identity"]["source_group_id"] = group_id
+                patched["identity"]["split"] = split
+                patched_examples.append(patched)
+            examples.extend(patched_examples)
             rejections.extend(result.rejections)
         self.guard.validate_no_leakage(
             [
@@ -109,6 +137,7 @@ class CorpusTrainingCompiler:
         return CorpusCompilation(
             tuple(examples), tuple(rejections), groups,
             exact_duplicate_count, near_duplicate_cluster_count,
+            cache_hits, cache_misses,
         )
 
 
@@ -238,10 +267,12 @@ def dataset_audit(compilation: CorpusCompilation, build: dict[str, Any]) -> dict
         return dict(sorted(Counter(str(value) for value in values).items()))
     hooks: list[str] = []
     structures: list[str] = []
-    languages: list[str] = []
     unknowns: Counter[str] = Counter()
     provenance: Counter[str] = Counter()
+    source_examples: dict[str, dict[str, Any]] = {}
     for item in examples:
+        source_examples.setdefault(item["identity"]["source_content_hash"], item)
+    for item in source_examples.values():
         plan = item["creative_plan"]
         hooks.extend(evidence_value(plan.get("hook_mechanisms")) or [])
         roles = evidence_value(plan.get("progression")) or []
@@ -251,7 +282,14 @@ def dataset_audit(compilation: CorpusCompilation, build: dict[str, Any]) -> dict
         for name, node in item["training_input"]["content_brief"].items():
             if isinstance(node, dict) and node.get("evidence_type") == "unknown":
                 unknowns[name] += 1
-        languages.append("unknown")
+    def bucket(value: Any, boundaries: tuple[float, ...], labels: tuple[str, ...]) -> str:
+        if not isinstance(value, (int, float)):
+            return "unknown"
+        for boundary, label in zip(boundaries, labels):
+            if float(value) < boundary:
+                return label
+        return labels[-1]
+    attributes = [item["identity"]["source_attributes"] for item in source_examples.values()]
     objectives = distribution([item["identity"]["dataset_objective"] for item in selected])
     splits = distribution([item["identity"]["split"] for item in selected])
     leakage_failures = sum(item["quality"]["leakage"]["severity"] == "high" for item in examples)
@@ -274,7 +312,32 @@ def dataset_audit(compilation: CorpusCompilation, build: dict[str, Any]) -> dict
         "near_duplicate_cluster_count": compilation.near_duplicate_cluster_count,
         "hook_distribution": distribution(hooks),
         "structure_distribution": distribution(structures),
-        "language_distribution": distribution(languages),
+        "language_distribution": distribution([item.get("language") or "unknown" for item in attributes]),
+        "topic_distribution": distribution([item.get("topic") or "unknown" for item in attributes]),
+        "format_distribution": distribution([item.get("content_format") or "unknown" for item in attributes]),
+        "duration_distribution_seconds": distribution([
+            bucket(item.get("duration_seconds"), (15, 30, 60, float("inf")), ("<15", "15-29", "30-59", "60+"))
+            for item in attributes
+        ]),
+        "word_count_distribution": distribution([
+            bucket(item.get("word_count"), (50, 100, 200, float("inf")), ("<50", "50-99", "100-199", "200+"))
+            for item in attributes
+        ]),
+        "speaking_rate_distribution_wps": distribution([
+            bucket(item.get("words_per_second"), (2, 3, 4, float("inf")), ("<2", "2-2.99", "3-3.99", "4+"))
+            for item in attributes
+        ]),
+        "cta_source_count": len({
+            item["identity"]["source_content_hash"] for item in examples
+            if item["identity"]["dataset_objective"] == TrainingObjective.CTA.value
+        }),
+        "mean_brief_reconstruction_completeness": round(
+            sum(item["quality"]["training_evidence_quality"]["components"]["brief_completeness"] for item in source_examples.values())
+            / len(source_examples), 4
+        ) if source_examples else 0.0,
+        "mean_training_evidence_quality": round(
+            sum(item["quality"]["training_evidence_quality"]["value"] for item in examples) / len(examples), 4
+        ) if examples else 0.0,
         "unknown_fields": dict(sorted(unknowns.items())),
         "provenance_mix": dict(sorted(provenance.items())),
         "rejection_count": len(compilation.rejections) + len(build["sampling_exclusions"]),
@@ -282,6 +345,7 @@ def dataset_audit(compilation: CorpusCompilation, build: dict[str, Any]) -> dict
             reason for item in [*compilation.rejections, *build["sampling_exclusions"]] for reason in item.get("reasons", [])
         ]),
         "warnings": warnings,
+        "cache": {"hits": compilation.cache_hits, "misses": compilation.cache_misses},
     }
 
 
@@ -292,6 +356,7 @@ def training_readiness_report(
     *,
     reviewed_examples: int = 0,
     minimum_reviewed_examples: int = 25,
+    minimum_exported_examples: int = 100,
     deterministic_regeneration_verified: bool = False,
 ) -> dict[str, Any]:
     examples = list(compilation.examples)
@@ -313,6 +378,11 @@ def training_readiness_report(
         "deterministic_regeneration_verified": deterministic_regeneration_verified,
         "validation_and_test_membership_frozen": bool(build["manifests"]),
         "sufficient_human_inspection": reviewed_examples >= minimum_reviewed_examples,
+        "sufficient_eligible_examples": len(selected) >= minimum_exported_examples,
+        "validation_and_test_sets_present": (
+            any(item["identity"]["split"] == "validation" for item in selected)
+            and any(item["identity"]["split"] == "test" for item in selected)
+        ),
     }
     failed = sorted(name for name, passed in gates.items() if not passed)
     return {
@@ -321,6 +391,7 @@ def training_readiness_report(
         "gates": gates,
         "failed_gates": failed,
         "review": {"reviewed_examples": reviewed_examples, "minimum_required": minimum_reviewed_examples},
+        "minimum_exported_examples": minimum_exported_examples,
         "dataset_summary": {
             "source_count": audit["total_source_videos"],
             "exported_example_count": len(selected),

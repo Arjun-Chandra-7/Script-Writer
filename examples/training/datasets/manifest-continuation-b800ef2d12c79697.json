@@ -1,0 +1,23 @@
+{
+  "client_context_id": "clientctx:viralyst-example-client:34b257e01068b0ae",
+  "client_context_sha256": "34b257e01068b0ae1ae2d5d17d233fc0088f85b5a38a74fa454ea0ce995f516b",
+  "compiler_version": "1.0.0",
+  "data_file": "continuation-b800ef2d12c79697.jsonl",
+  "data_sha256": "b800ef2d12c7969798c929c836ddc58c9f104468a8f82e2addf7070be7f237d7",
+  "dataset_id": "tds:continuation:b800ef2d12c79697",
+  "example_count": 1,
+  "manifest_version": "1.0.0",
+  "objective": "continuation",
+  "performance_signal_used": false,
+  "sampling_exclusion_count": 0,
+  "sampling_policy": {
+    "automatic_rebalancing": false,
+    "max_examples_per_cluster_per_objective": null,
+    "max_examples_per_source_per_objective": null
+  },
+  "source_group_count": 1,
+  "split_counts": {
+    "train": 1
+  },
+  "training_execution_enabled": false
+}

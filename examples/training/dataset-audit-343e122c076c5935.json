@@ -1,0 +1,75 @@
+{
+  "audit_version": "1.0.0",
+  "cache": {
+    "hits": 1,
+    "misses": 0
+  },
+  "cta_source_count": 0,
+  "duration_distribution_seconds": {
+    "30-59": 1
+  },
+  "eligibility": {
+    "eligible": 1,
+    "ineligible": 14
+  },
+  "eligible_sources": 1,
+  "exact_duplicate_count": 0,
+  "examples_per_objective": {
+    "continuation": 1
+  },
+  "format_distribution": {
+    "unknown": 1
+  },
+  "hook_distribution": {
+    "authority": 1,
+    "question": 1
+  },
+  "language_distribution": {
+    "en": 1
+  },
+  "leakage_failures": 0,
+  "mean_brief_reconstruction_completeness": 0.5625,
+  "mean_training_evidence_quality": 0.7789,
+  "near_duplicate_cluster_count": 0,
+  "provenance_mix": {
+    "deterministic_derivation": 1,
+    "heuristic_inference": 1,
+    "observed": 1,
+    "unknown": 1
+  },
+  "rejected_sources": 0,
+  "rejection_count": 14,
+  "rejection_reasons": {
+    "missing_reliable_topic_or_central_idea": 14
+  },
+  "speaking_rate_distribution_wps": {
+    "2-2.99": 1
+  },
+  "split_sizes": {
+    "train": 1
+  },
+  "structure_distribution": {
+    "hook -> setup -> proof -> question -> payoff -> payoff -> payoff -> payoff -> payoff -> conclusion": 1
+  },
+  "topic_distribution": {
+    "unknown": 1
+  },
+  "total_compiled_examples": 15,
+  "total_source_videos": 1,
+  "total_training_examples": 1,
+  "unknown_fields": {
+    "audience_problem_desire": 1,
+    "central_idea": 1,
+    "content_format": 1,
+    "content_objective": 1,
+    "desired_outcome": 1,
+    "subtopic": 1,
+    "topic": 1
+  },
+  "warnings": [
+    "objective imbalance: continuation is 1/1 examples"
+  ],
+  "word_count_distribution": {
+    "100-199": 1
+  }
+}

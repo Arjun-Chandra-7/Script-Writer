@@ -120,6 +120,9 @@ class TrainingExampleCompiler:
                 warnings.append("conditioning_target_similarity_warning")
             if _known_fraction(brief) < 0.20:
                 reasons.append("insufficient_brief_reconstruction")
+            has_subject = known_evidence(brief.get("topic")) or known_evidence(brief.get("central_idea"))
+            if not has_subject and objective is not TrainingObjective.CONTINUATION:
+                reasons.append("missing_reliable_topic_or_central_idea")
             if any(
                 item.get("upstream_verification_status") == "structural_hypothesis_unverified"
                 for item in intelligence["script_structure"].get("major_beats", [])
@@ -145,6 +148,14 @@ class TrainingExampleCompiler:
                     "source_group_id": group_id,
                     "split": split,
                     "variant_id": variant_id,
+                    "source_attributes": {
+                        "language": evidence_value(intelligence["content"].get("language")),
+                        "duration_seconds": evidence_value(intelligence["content"].get("video_duration_seconds")),
+                        "word_count": evidence_value(intelligence["content"].get("spoken_word_count")),
+                        "words_per_second": evidence_value(intelligence["content"].get("words_per_second")),
+                        "topic": evidence_value(intelligence["content"].get("topic")),
+                        "content_format": evidence_value(intelligence["content"].get("content_format")),
+                    },
                 },
                 "client_context_ref": {
                     "context_id": client_context["context_id"],

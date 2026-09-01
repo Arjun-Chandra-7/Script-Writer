@@ -27,7 +27,10 @@ def _client_field(context: dict[str, Any], name: str) -> dict[str, Any]:
 def _named_concepts(text: str) -> list[str]:
     # Conservative surface-form extraction: no entity type or unstated meaning is inferred.
     candidates = re.findall(r"\b(?:[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,2}|[A-Z]{2,})\b", text)
-    stop = {"Let", "Well", "Okay", "What", "So", "And", "But", "The", "I"}
+    stop = {
+        "Let", "Well", "Okay", "What", "So", "And", "But", "The", "I",
+        "You", "He", "She", "It", "They", "We", "This", "That",
+    }
     result: list[str] = []
     for candidate in candidates:
         if candidate in stop or candidate.lower() in {item.lower() for item in result}:
@@ -66,6 +69,7 @@ class MinimumConditioningReconstructor:
         )
         topic = content.get("topic")
         brief = {
+            "language": content.get("language", unknown("language unavailable")),
             "topic": topic if known_evidence(topic) else unknown("topic requires reviewed semantic reconstruction"),
             "subtopic": content.get("subtopic", unknown("subtopic unavailable")),
             "central_idea": unknown("a central idea cannot be recovered reliably without semantic review"),
