@@ -47,7 +47,16 @@ Script Writer interface
   structured ScriptGenerationResult (deterministic demonstrator today)
         |
         v
-Offline evaluation today / human judgment and possible training later
+Offline evaluation
+        |
+        v
+Client context projection -> intent reconstruction -> training examples
+        |
+        v
+quality/leakage filters -> universal grouped splits -> immutable manifests
+        |
+        v
+TrainingReadinessReport -> future training only
 ```
 
 ## Ingestion invariants retained
@@ -163,9 +172,32 @@ are checked after generation; offline evaluation measures contiguous and
 5-gram overlap. The included deterministic outline generator demonstrates the
 contract only. It is not the final creative agent.
 
+## Training-data compiler
+
+`ClientTrainingContext` projects only allowlisted script-relevant fields from
+`client.json` and retains the source path/hash and field provenance. A versioned
+`IntentReconstructor` contract supplies the minimum sufficient conditioning.
+The local implementation preserves known fields and conservative surface forms,
+but refuses to invent a topic, central idea, creator prompt, or business goal.
+
+Each source may yield full-script, hook, continuation, abstract structure,
+section, CTA, and measurable-style candidates. Unsupported candidates are
+omitted; insufficient candidates remain reviewable but are excluded from
+manifests with explicit reasons. Low-level color, spectral, and frame features
+never enter script conditioning.
+
+Conditioning is compared against its target using token-set overlap, five-gram
+overlap, longest contiguous token sequence, and exact long-sentence matching.
+High-severity matches are rejected. `training_evidence_quality` is a decomposed
+measure of evidence readiness only and is never called creative quality,
+performance, or virality.
+
 ## Objective-specific datasets and leakage
 
-There is no universal dataset split:
+Training objectives have independent manifests, but every example derived from
+one source/near-duplicate cluster receives one **universal split**. Objective
+names are deliberately excluded from the split hash, preventing a hook in train
+while its full script appears in validation.
 
 | Objective | Eligibility | Split policy |
 |---|---|---|
@@ -178,7 +210,7 @@ There is no universal dataset split:
 
 Split percentages are policies, not universal truths. `LeakageGuard` clusters by
 source hash, exact transcript, derived-source linkage, and banded 64-bit
-transcript SimHash before deterministic objective-specific assignment. Manifest
+transcript SimHash before deterministic universal assignment. Manifest
 validation rejects a cluster crossing splits. The legacy inert training-manifest
 code remains for audit compatibility but is not invoked by the watcher and does
 not constitute a valid SFT dataset.
@@ -207,9 +239,13 @@ For 5,000–50,000 reports:
 - each giant raw JSON is parsed once during new ingestion;
 - compact intelligence JSON and projections are cached;
 - compilation and embedding rebuilds are incremental and batch-bounded;
+- training compilation reads compact intelligence rather than giant extractor
+  reports and caches unchanged record/client/compiler combinations in a
+  versioned SQLite cache;
 - FTS and metadata filter candidates before record loading;
 - full structural comparison reads compact fingerprints only;
-- schema v1 databases migrate deterministically to v2;
+- the registry migrates deterministically to v2; the separate training cache
+  carries and checks its own schema version;
 - raw corruption is quarantined and compiler failures are separately observable;
 - compiler, analyzer, embedding, schema, and fixture versions make rebuilds reproducible.
 
@@ -220,7 +256,10 @@ concurrent writer hosts would require a transactional server database.
 
 - learned semantic analyzer and production embeddings;
 - Instagram Insights connector and cohort-normalization jobs;
-- editor/human rating interface;
+- production semantic intent reconstructor and reviewed topic/brief labels;
+- richer browser-based editor interface (compact CLI review exists today);
 - production creative generator used by the three agents;
 - frozen retrieval judgments and broader challenge fixtures;
 - any training, fine-tuning, checkpoint, or promotion workflow.
+
+The authoritative training-data design is in `docs/training-data.md`.

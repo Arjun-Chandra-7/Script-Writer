@@ -1,6 +1,6 @@
 # Research and extractor audit
 
-Accessed and updated 2026-08-31. Primary/official sources are preferred.
+Accessed and updated 2026-09-01. Primary/official sources are preferred.
 
 ## Real extractor report findings
 
@@ -36,10 +36,32 @@ the sample contains high-confidence OCR strings with zero lexical alignment.
 | Agentic YouTube portfolio/channels | One client/account context; Instagram/Reels first |
 | Agents are niche specialists | Three peers share the same intelligence and may vary outputs |
 | YouTube Shorts outcome fields | Platform-aware outcome envelope with Instagram/Reels metrics |
-| Raw reports become training examples | Raw -> canonical intelligence -> retrieval; training absent |
+| Raw reports become training examples | Raw -> canonical intelligence -> filtered training candidates; no model training |
 | Automatic 500-file training proposal | Watcher compiles/indexes only; auto-proposal disabled |
 | Universal 90/5/5 | Objective-specific policies with grouped leakage protection |
 | Fine-tuning architecture is the near-term center | Retrieval-first generation and evaluation are current |
+
+The current training-data phase changes the fourth row further: canonical
+intelligence may now produce supervised candidates, but only after compact
+client conditioning, intent reconstruction, target-leakage checks, quality
+filtering, and universal source-cluster splitting. Candidate existence does not
+mean eligibility.
+
+## Training-intent reconstruction findings
+
+Supervision requires an intent-to-output mapping, not merely an analyzed target.
+The real sample demonstrates the hard case: language, duration, measurable
+style, hook hypotheses, and beat hypotheses exist, while topic, central idea,
+audience problem, creator objective, format, and CTA do not. Surface entity
+hints cannot safely replace a reviewed topic. The conservative compiler
+therefore generated 15 inspectable candidates but exported only the continuation
+candidate, whose observed hook is valid conditioning for a non-overlapping
+remainder target. Fourteen candidates were rejected for
+`missing_reliable_topic_or_central_idea`.
+
+This is the expected quality behavior. The next research requirement is a
+versioned semantic intent adapter evaluated against human-reconstructed minimum
+briefs—not a generic request to "write a viral script."
 
 The historical `.docx` remains unchanged for provenance.
 
@@ -92,6 +114,11 @@ Generation context marks source text analysis-only. Offline evaluation measures
 contiguous and five-gram overlap. These are deterministic warning/gate signals,
 not a complete originality judgment.
 
+Training conditioning receives stricter checks: exact long sentences, longest
+contiguous token sequences, target five-gram coverage, and token-set Jaccard.
+The real full-script candidate had Jaccard 0.057325, longest match 1 token, and
+zero shared target five-grams. It passed leakage but failed brief sufficiency.
+
 ## Evaluation boundary
 
 Constraint, schema, timing, reference-integrity, and overlap checks can be
@@ -102,8 +129,8 @@ dimensions into a fake aggregate score.
 
 ## Open research before a production generator
 
-1. Label and audit a representative semantic set for topic, format, hook,
-   retention, story, persuasion, claim, and CTA taxonomies.
+1. Human-reconstruct minimum sufficient briefs for a stratified source sample,
+   with explicit unknowns, then evaluate a versioned intent adapter.
 2. Establish inter-rater agreement and uncertainty policy for editor judgments.
 3. Compare learned embedding providers against labeled retrieval queries.
 4. Define client-context storage, factual source provenance, and privacy rules.

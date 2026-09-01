@@ -7,8 +7,7 @@ wider system's three creative agents can call the same corpus and contracts;
 they are parallel creative producers, not separate channel specialists.
 
 **No model training, fine-tuning, GPU work, or external model API is implemented
-or invoked.** The current baseline is deterministic compilation + local
-retrieval + a versioned generator interface.
+or invoked.** The current system now ends at audited, immutable training data.
 
 ## What exists today
 
@@ -35,6 +34,12 @@ Retrieval-first generation context -> generator contract -> structured result
         |
         v
 Deterministic offline checks + pending human/model-judgment dimensions
+        |
+        v
+ClientTrainingContext + intent reconstruction -> leakage-safe objective datasets
+        |
+        v
+Dataset audit + TrainingReadinessReport -> FUTURE training only
 ```
 
 Implemented capabilities:
@@ -55,6 +60,12 @@ Implemented capabilities:
 - Instagram/Reels-compatible outcome records kept separate from content evidence;
 - objective-specific dataset policies and exact/derived/near-duplicate leakage guards;
 - regression fixtures and offline evaluation without fabricated quality scores.
+- compact, source-grounded `ClientTrainingContext` projections;
+- seven objective-specific `ScriptTrainingExample` contracts;
+- target-leakage metrics, quality filtering, duplicate clustering, universal
+  source splits, immutable JSONL manifests, and explicit rejection files;
+- incremental per-record compilation cache, corpus audit, readiness gates, and
+  compact CLI review workflow.
 
 ## What does not exist yet
 
@@ -63,7 +74,9 @@ Implemented capabilities:
 - human/editor judgment collection;
 - Instagram Insights ingestion and cohort normalization;
 - a production embedding provider (the interface exists; local hashing is a baseline);
-- SFT/preference datasets, model training, fine-tuning, or model promotion.
+- production semantic intent reconstruction, which is required before most
+  real full-script candidates become eligible;
+- model training, fine-tuning, preference optimization, or model promotion.
 
 Unknown is deliberately emitted when evidence is absent. The extractor report
 describes content, not performance; analytics later add ranking/weighting signals
@@ -102,5 +115,21 @@ SCRIPT_WRITER_STATE_DIR=/tmp/viralyst-demo .venv/bin/script-writer query \
   --hook question --retention contrast
 ```
 
+Build the committed real training-data demonstration:
+
+```bash
+.venv/bin/script-writer dataset build \
+  --client fixtures/client.example.json \
+  --intelligence examples/compiled/86c1671e8a3a7b46.script-intelligence.v1.json \
+  --output /tmp/viralyst-training-data
+.venv/bin/script-writer dataset audit /tmp/viralyst-training-data
+```
+
+The real sample intentionally remains `not_training_ready`: its topic and
+central idea are not reliably present, so 14 candidates are rejected and only
+one continuation example is exported. See the committed
+[`examples/training`](examples/training/) artifacts.
+
 See [architecture](docs/architecture.md), [operations](docs/operations.md),
-[research](docs/research.md), and the machine-readable [schemas](schemas/).
+[training-data pipeline](docs/training-data.md), [research](docs/research.md),
+and the machine-readable [schemas](schemas/).

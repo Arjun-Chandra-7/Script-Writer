@@ -116,6 +116,45 @@ The draft command is a pipeline/contract demonstrator, not the production
 creative writer. Evaluation persists deterministic results and leaves
 subjective dimensions unscored.
 
+## Training-data compilation
+
+This command consumes compact `ScriptIntelligenceRecord` files, never the giant
+raw extractor report:
+
+```bash
+.venv/bin/script-writer dataset build \
+  --client fixtures/client.example.json \
+  --intelligence examples/compiled/86c1671e8a3a7b46.script-intelligence.v1.json \
+  --output /tmp/viralyst-training-data \
+  --minimum-reviews 25 \
+  --minimum-examples 100
+.venv/bin/script-writer dataset audit /tmp/viralyst-training-data
+```
+
+Repeat `--intelligence PATH` for additional records. Exact reruns reuse
+`.training-cache/compilations.sqlite3`; the cache is rebuildable and excluded
+from source control. Dataset JSONL and manifests are content-addressed and
+write-once. Optional `--source-cap` and `--cluster-cap` sampling limits are
+recorded in every manifest; no silent balancing occurs.
+
+Inspect and review without opening source reports:
+
+```bash
+.venv/bin/script-writer dataset show /tmp/viralyst-training-data EXAMPLE_ID
+.venv/bin/script-writer dataset review /tmp/viralyst-training-data EXAMPLE_ID flag \
+  --note 'topic reconstruction needs review'
+```
+
+Decisions `reject` and `flag` hold an example out of subsequent manifests;
+`accept` records inspection. Re-run `dataset build` after decisions to produce
+new immutable artifacts and a new readiness report. Old manifests remain
+unchanged.
+
+Do not lower readiness thresholds to make a tiny demonstration pass. A report
+must show no cross-split or target leakage, sufficient eligible examples,
+frozen validation/test membership, and sufficient human inspection before its
+status can become `training_ready`.
+
 ## Monitoring and recovery
 
 ```bash
@@ -136,3 +175,4 @@ the raw report admitted and record an independently retryable error.
 - `propose-run` is retained only for compatibility/audit and produces an inert
   legacy manifest; it is not a Script Intelligence workflow.
 - No training runner, model weights, checkpoints, or promotion operation exists.
+- `dataset build` only writes training data; it cannot launch a training job.

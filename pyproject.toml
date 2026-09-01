@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "viralyst-script-writer"
-version = "0.2.0"
-description = "Evidence-grounded script intelligence and retrieval for VIRALYST"
+version = "0.3.0"
+description = "Evidence-grounded script intelligence and training-data compilation for VIRALYST"
 requires-python = ">=3.11"
 dependencies = [
   "google-api-python-client>=2.140,<3",
