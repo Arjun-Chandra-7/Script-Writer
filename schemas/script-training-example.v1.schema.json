@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralyst.local/schemas/script-training-example.v1.schema.json",
+  "title": "ScriptTrainingExample",
+  "type": "object",
+  "required": ["schema_version", "example_id", "identity", "client_context_ref", "training_input", "creative_plan", "target_output", "provenance", "quality", "review"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "example_id": {"type": "string", "minLength": 1},
+    "identity": {
+      "type": "object",
+      "required": ["source_video_id", "source_report_id", "script_intelligence_record_id", "compiler_version", "client_id", "source_content_hash", "dataset_objective", "source_group_id", "split"]
+    },
+    "client_context_ref": {"type": "object"},
+    "training_input": {"type": "object"},
+    "creative_plan": {"type": "object"},
+    "target_output": {"type": "object", "required": ["text", "target_type"]},
+    "provenance": {"type": "object"},
+    "quality": {
+      "type": "object",
+      "required": ["eligibility", "exclusion_reasons", "warnings", "leakage", "training_evidence_quality", "performance_signal_used"]
+    },
+    "review": {"type": "object"}
+  }
+}

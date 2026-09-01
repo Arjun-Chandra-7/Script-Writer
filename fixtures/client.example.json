@@ -1,0 +1,13 @@
+{
+  "client_id": "viralyst-example-client",
+  "positioning": "Evidence-led public-interest technology commentary",
+  "niche": "technology and public-interest commentary",
+  "audience": "English-speaking viewers interested in technology and public affairs",
+  "content_pillars": ["technology leadership", "public accountability", "social consequences"],
+  "brand_voice": ["direct", "specific", "critical without fabricated certainty"],
+  "tone": ["conversational", "evidence-conscious"],
+  "vocabulary_preferences": {"prefer": ["plain language"], "avoid": ["empty hype"]},
+  "cta_preferences": {"require_cta": false},
+  "factual_constraints": ["Do not present unverified allegations as established fact"],
+  "prohibited_claims": ["invented performance claims", "unsupported personal allegations"]
+}

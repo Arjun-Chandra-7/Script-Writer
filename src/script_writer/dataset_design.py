@@ -85,6 +85,28 @@ def hamming_distance(left: int, right: int) -> int:
     return (left ^ right).bit_count()
 
 
+def assign_universal_training_split(
+    group_id: str,
+    *,
+    salt: str,
+    split_percentages: dict[str, int] | None = None,
+) -> str:
+    """Assign one source cluster once for every derived training objective."""
+    percentages = split_percentages or {"train": 90, "validation": 5, "test": 5}
+    if sum(percentages.values()) != 100:
+        raise ValueError("split percentages must sum to 100")
+    bucket = int.from_bytes(
+        hashlib.blake2b(group_id.encode(), key=salt.encode(), digest_size=8).digest(),
+        "big",
+    ) % 100
+    cumulative = 0
+    for split, percentage in percentages.items():
+        cumulative += percentage
+        if bucket < cumulative:
+            return split
+    raise AssertionError("unreachable split assignment")
+
+
 @dataclass(frozen=True)
 class LeakageIdentity:
     source_content_hash: str

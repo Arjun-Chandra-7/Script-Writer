@@ -21,6 +21,8 @@ from .evaluation import OfflineEvaluator
 from .generation import DeterministicOutlineGenerator, GenerationRequest, RetrievalFirstScriptWriter
 from .ingestion import IngestionService, MemorySource
 from .intelligence import ScriptIntelligenceCompiler
+from .training_dataset import ReviewStore, SamplingPolicy
+from .training_workflow import build_training_artifacts, inspect_example
 from .validation import parse_and_validate_report
 
 
@@ -129,6 +131,25 @@ def build_parser() -> argparse.ArgumentParser:
         "dry-run-sample", help="ingest one local report without Drive access"
     )
     dry_run.add_argument("path", type=Path)
+    dataset = commands.add_parser("dataset", help="compile, audit, and inspect training data")
+    dataset_commands = dataset.add_subparsers(dest="dataset_command", required=True)
+    dataset_build = dataset_commands.add_parser("build", help="build immutable objective datasets")
+    dataset_build.add_argument("--client", type=Path, required=True)
+    dataset_build.add_argument("--intelligence", type=Path, action="append", required=True)
+    dataset_build.add_argument("--output", type=Path, required=True)
+    dataset_build.add_argument("--cluster-cap", type=int)
+    dataset_build.add_argument("--source-cap", type=int)
+    dataset_build.add_argument("--minimum-reviews", type=int, default=25)
+    dataset_show = dataset_commands.add_parser("show", help="show one compact review view")
+    dataset_show.add_argument("directory", type=Path)
+    dataset_show.add_argument("example_id")
+    dataset_review = dataset_commands.add_parser("review", help="accept, reject, or flag an example")
+    dataset_review.add_argument("directory", type=Path)
+    dataset_review.add_argument("example_id")
+    dataset_review.add_argument("decision", choices=("accept", "reject", "flag"))
+    dataset_review.add_argument("--note", default="")
+    dataset_audit_command = dataset_commands.add_parser("audit", help="show the latest immutable dataset audit")
+    dataset_audit_command.add_argument("directory", type=Path)
     return parser
 
 
@@ -291,6 +312,36 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "dry-run-sample":
         print(json.dumps(_dry_run_sample(settings, args.path), sort_keys=True))
         return 0
+    if args.command == "dataset":
+        if args.dataset_command == "build":
+            result = build_training_artifacts(
+                args.intelligence,
+                args.client,
+                args.output,
+                split_salt=settings.split_salt,
+                sampling_policy=SamplingPolicy(
+                    max_examples_per_cluster_per_objective=args.cluster_cap,
+                    max_examples_per_source_per_objective=args.source_cap,
+                ),
+                minimum_reviewed_examples=args.minimum_reviews,
+            )
+            print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
+            return 0
+        if args.dataset_command == "show":
+            print(json.dumps(inspect_example(args.directory, args.example_id), indent=2, ensure_ascii=False, sort_keys=True))
+            return 0
+        if args.dataset_command == "review":
+            decision = ReviewStore(args.directory / "reviews.json").record(
+                args.example_id, args.decision, note=args.note
+            )
+            print(json.dumps({"example_id": args.example_id, **decision}, sort_keys=True))
+            return 0
+        if args.dataset_command == "audit":
+            paths = sorted(args.directory.glob("dataset-audit-*.json"), reverse=True)
+            if not paths:
+                raise FileNotFoundError("no dataset audit found")
+            print(paths[0].read_text(), end="")
+            return 0
     if args.command == "watch":
         stop = False
 

@@ -1,0 +1,132 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+from typing import Any
+
+from .training_contracts import ClientTrainingContext, canonical_json, evidence_value
+from .training_dataset import (
+    CorpusTrainingCompiler,
+    ReviewStore,
+    SamplingPolicy,
+    TrainingDatasetBuilder,
+    _atomic_write_once,
+    dataset_audit,
+    training_readiness_report,
+)
+
+
+def _write_content_addressed(directory: Path, stem: str, suffix: str, payload: bytes) -> Path:
+    digest = hashlib.sha256(payload).hexdigest()[:16]
+    path = directory / f"{stem}-{digest}.{suffix}"
+    _atomic_write_once(path, payload)
+    return path
+
+
+def build_training_artifacts(
+    intelligence_paths: list[Path],
+    client_path: Path,
+    output_dir: Path,
+    *,
+    split_salt: str,
+    sampling_policy: SamplingPolicy = SamplingPolicy(),
+    minimum_reviewed_examples: int = 25,
+) -> dict[str, Any]:
+    if not intelligence_paths:
+        raise ValueError("at least one ScriptIntelligenceRecord is required")
+    records = [json.loads(path.read_text()) for path in sorted(intelligence_paths)]
+    client = ClientTrainingContext.from_path(client_path)
+    compiler = CorpusTrainingCompiler(split_salt=split_salt)
+    first = compiler.compile(records, client.projection)
+    second = compiler.compile(records, client.projection)
+    deterministic = first == second
+    builder = TrainingDatasetBuilder(output_dir / "datasets", sampling_policy)
+    build = builder.build(first, client.projection)
+    audit = dataset_audit(first, build)
+    decisions = ReviewStore(output_dir / "reviews.json").decisions()
+    readiness = training_readiness_report(
+        first,
+        build,
+        audit,
+        reviewed_examples=len(decisions),
+        minimum_reviewed_examples=minimum_reviewed_examples,
+        deterministic_regeneration_verified=deterministic,
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    client_bytes = (json.dumps(client.projection, indent=2, ensure_ascii=False, sort_keys=True) + "\n").encode()
+    client_output = _write_content_addressed(output_dir, "client-training-context", "json", client_bytes)
+    examples_bytes = ("\n".join(canonical_json(item) for item in first.examples) + "\n").encode()
+    examples_output = _write_content_addressed(output_dir, "compiled-examples", "jsonl", examples_bytes)
+    source_lines = []
+    for record in records:
+        source_lines.append(
+            canonical_json(
+                {
+                    "record_id": record["record_id"],
+                    "report_id": evidence_value(record["identity"]["report_id"]),
+                    "source_content_hash": evidence_value(record["identity"]["source_content_hash"]),
+                    "source_transcript": evidence_value(record["content"]["clean_transcript"]),
+                }
+            )
+        )
+    sources_output = _write_content_addressed(
+        output_dir, "review-sources", "jsonl", ("\n".join(source_lines) + "\n").encode()
+    )
+    audit_output = _write_content_addressed(
+        output_dir, "dataset-audit", "json", (json.dumps(audit, indent=2, sort_keys=True) + "\n").encode()
+    )
+    readiness_output = _write_content_addressed(
+        output_dir, "training-readiness", "json", (json.dumps(readiness, indent=2, sort_keys=True) + "\n").encode()
+    )
+    return {
+        "client_context": str(client_output),
+        "compiled_examples": str(examples_output),
+        "review_sources": str(sources_output),
+        "dataset_audit": str(audit_output),
+        "training_readiness": str(readiness_output),
+        "manifests": build["manifests"],
+        "summary": audit,
+        "readiness": readiness,
+    }
+
+
+def inspect_example(directory: Path, example_id: str) -> dict[str, Any]:
+    examples: dict[str, Any] | None = None
+    for path in sorted(directory.glob("compiled-examples-*.jsonl"), reverse=True):
+        for line in path.read_text().splitlines():
+            item = json.loads(line)
+            if item["example_id"] == example_id:
+                examples = item
+                break
+        if examples:
+            break
+    if examples is None:
+        raise KeyError(example_id)
+    transcript = None
+    source_hash = examples["identity"]["source_content_hash"]
+    for path in sorted(directory.glob("review-sources-*.jsonl"), reverse=True):
+        for line in path.read_text().splitlines():
+            source = json.loads(line)
+            if source["source_content_hash"] == source_hash:
+                transcript = source["source_transcript"]
+                break
+        if transcript is not None:
+            break
+    client = None
+    client_paths = sorted(directory.glob("client-training-context-*.json"), reverse=True)
+    if client_paths:
+        client = json.loads(client_paths[0].read_text())
+    return {
+        "example_id": example_id,
+        "source_transcript": transcript,
+        "client_context_projection": client,
+        "reconstructed_brief": examples["training_input"]["content_brief"],
+        "creative_plan": examples["creative_plan"],
+        "target": examples["target_output"],
+        "provenance": examples["provenance"],
+        "leakage": examples["quality"]["leakage"],
+        "eligibility": examples["quality"]["eligibility"],
+        "exclusion_reasons": examples["quality"]["exclusion_reasons"],
+        "review": examples["review"],
+    }

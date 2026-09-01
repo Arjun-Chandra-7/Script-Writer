@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralyst.local/schemas/training-readiness-report.v1.schema.json",
+  "title": "TrainingReadinessReport",
+  "type": "object",
+  "required": ["schema_version", "status", "gates", "failed_gates", "review", "dataset_summary", "training_execution_enabled"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "status": {"enum": ["training_ready", "not_training_ready"]},
+    "gates": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "failed_gates": {"type": "array", "items": {"type": "string"}},
+    "training_execution_enabled": {"const": false}
+  }
+}

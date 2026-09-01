@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralyst.local/schemas/client-training-context.v1.schema.json",
+  "title": "ClientTrainingContext",
+  "type": "object",
+  "required": ["schema_version", "context_id", "client_id", "source", "fields"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "context_id": {"type": "string", "minLength": 1},
+    "client_id": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+    },
+    "fields": {"type": "object"}
+  }
+}
