@@ -129,13 +129,18 @@ class TrainingDataTests(unittest.TestCase):
         self.assertNotIn(TrainingObjective.SECTION.value, objectives)
 
     def test_verified_cta_creates_cta_example(self) -> None:
-        record = copy.deepcopy(REAL)
+        record = record_with_test_topic()
         record["script_structure"]["cta"] = heuristic(
             {"text": "Follow for the next explanation.", "start_seconds": 55, "end_seconds": 59},
             [], "test_reviewed_boundary", 0.9,
         )
         result = CorpusTrainingCompiler(split_salt="tests").compile([record], context().projection)
-        self.assertTrue(any(item["identity"]["dataset_objective"] == TrainingObjective.CTA.value for item in result.examples))
+        cta = next(item for item in result.examples if item["identity"]["dataset_objective"] == TrainingObjective.CTA.value)
+        self.assertNotEqual(cta["quality"]["eligibility"], "ineligible")
+        self.assertEqual(
+            {item["identity"]["dataset_objective"] for item in result.examples if item["quality"]["eligibility"] != "ineligible"},
+            {item.value for item in TrainingObjective},
+        )
 
     def test_short_script_is_ineligible_with_explicit_reason(self) -> None:
         record = copy.deepcopy(REAL)

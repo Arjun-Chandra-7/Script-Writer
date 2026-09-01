@@ -8,7 +8,7 @@ import copy
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from .dataset_design import (
     LeakageGuard,
@@ -27,6 +27,14 @@ from .training_contracts import (
     evidence_value,
     validate_training_example,
 )
+
+
+class OutcomeAwareSamplingProvider(Protocol):
+    """Future interface; no implementation or outcome weighting exists today."""
+
+    version: str
+
+    def weight(self, example: dict[str, Any], outcome: dict[str, Any]) -> float: ...
 
 
 @dataclass(frozen=True)
@@ -104,7 +112,12 @@ class CorpusTrainingCompiler:
             group_id = groups[identity.source_content_hash]
             split = assign_universal_training_split(group_id, salt=self.split_salt)
             cache_key = hashlib.sha256(
-                (canonical_json(record) + canonical_json(client_context) + self.example_compiler.reconstructor.version).encode()
+                (
+                    canonical_json(record)
+                    + canonical_json(client_context)
+                    + TRAINING_COMPILER_VERSION
+                    + self.example_compiler.reconstructor.version
+                ).encode()
             ).hexdigest()
             result = self.cache.get(cache_key) if self.cache is not None else None
             if result is None:
