@@ -70,7 +70,12 @@ Implemented capabilities:
   leakage/compression checks, gold-set evaluation helpers, and shard export.
 - real-corpus semantic quality-validation workflow: stratified, evaluation-only
   gold selection; blind/assisted review; adjudication; frozen gold exclusions;
-  adapter, ablation, contamination, pilot, calibration, and anomaly reports.
+  adapter, ablation, contamination, pilot, calibration, and anomaly reports;
+- corpus suitability layer (`CorpusSuitabilityRecord`) separating client relevance
+  from script learning value, evaluating 7 objective-specific tiers (`ELIGIBLE`,
+  `MARGINAL`, `INELIGIBLE`), routing silent-but-valid videos to non-script
+  subsystems (editing, audio, visual), and generating machine-readable feedback
+  reports (`CorpusFeedbackReport`) for the upstream RAG Searcher.
 
 ## What does not exist yet
 
